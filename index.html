@@ -175,6 +175,9 @@
   <div class="shell" id="shell"></div>
 </div>
 
+<!-- 서버 API 없이 브라우저 안에서 OCR 실행 -->
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
 <script>
 (function(){
   try{ document.title = '천하무적동부교육팀 교육생 만족도 체크'; }catch(e){}
@@ -258,34 +261,193 @@
     return (s===undefined||s===null?'':String(s)).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
 
-  // ---------- OCR via server-side AI proxy ----------
-  // 브라우저에 API 키를 노출하지 않습니다.
-  // Vercel의 /api/extract 함수가 Vercel AI Gateway(OIDC)로 AI를 호출합니다. 별도 Anthropic 키가 필요하지 않습니다.
-  async function extractFromImage(base64, mediaType){
-    const controller = new AbortController();
-    const timer = setTimeout(()=>controller.abort(), 55000);
-    let resp;
+  // ---------- 브라우저 OCR ----------
+  // 서버 API / API Key / Vercel Function을 사용하지 않습니다.
+  // 이미지 문자인식은 사용자의 브라우저에서 Tesseract.js로 실행됩니다.
+
+  const OCR_STOPWORDS = new Set([
+    '참가자','참가자목록','참가','목록','이름','회의','회의정보','대기실','호스트',
+    '교육강사','강사','나','초대','모두음소거','음소거','비디오','오디오',
+    '채팅','반응','화면공유','보안','기록','종료','나가기','검색','더보기',
+    'zoom','ZOOM','Zoom','SIA','sia'
+  ]);
+
+  function cleanOcrLine(line){
+    return String(line || '')
+      .replace(/[|•●■□◆◇▶►※]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function normalizeKoreanName(raw){
+    let s = String(raw || '').trim();
+    s = s.replace(/의\s*(iPad|iPhone|Galaxy|Android|Phone|PC|Mac).*$/i, '');
+    s = s.replace(/[^\uAC00-\uD7A3]/g, '');
+    return /^[가-힣]{2,4}$/.test(s) ? s : '';
+  }
+
+  function looksLikeUiLine(line){
+    const compact = line.replace(/\s/g,'');
+    if(!compact) return true;
+    if(/^\d{1,2}[:.]\d{2}/.test(line)) return true;
+    if(/^\d+%?$/.test(compact)) return true;
+    for(const w of OCR_STOPWORDS){
+      if(compact === String(w).replace(/\s/g,'')) return true;
+    }
+    if(/참가자|대기실|모두\s*음소거|화면\s*공유|회의\s*종료|오디오|비디오/i.test(line)) return true;
+    return false;
+  }
+
+  function extractCourseMeta(text){
+    const lines = String(text || '').split(/\r?\n/).map(cleanOcrLine).filter(Boolean);
+    let courseName = '';
+    let session = '';
+    let schedule = '';
+
+    for(const line of lines){
+      if(!session){
+        const m = line.match(/(\d{1,3})\s*차수/);
+        if(m) session = m[1];
+      }
+      if(!schedule){
+        const d = line.match(/(20\d{2}[.\-/]\s*\d{1,2}[.\-/]\s*\d{1,2}|\d{1,2}[.\-/]\s*\d{1,2}[.\-/]\s*20\d{2})/);
+        if(d) schedule = d[1].replace(/\s/g,'');
+      }
+    }
+
+    const titleCandidate = lines.find(line =>
+      /교육|과정|BOOST|부산|대구|유선|인증|NPS|Btv|max/i.test(line) &&
+      !looksLikeUiLine(line) &&
+      line.length >= 5
+    );
+    if(titleCandidate){
+      courseName = titleCandidate.replace(/\d{1,3}\s*차수.*$/,'').trim();
+    }
+    return {courseName, session, schedule};
+  }
+
+  function parseStudentsFromOcr(text){
+    const lines = String(text || '')
+      .split(/\r?\n/)
+      .map(cleanOcrLine)
+      .filter(Boolean);
+
+    const byName = new Map();
+
+    for(let line of lines){
+      if(looksLikeUiLine(line)) continue;
+
+      // 시간/상태 문자열 제거
+      line = line
+        .replace(/\b\d{1,2}:\d{2}(?::\d{2})?\b/g,' ')
+        .replace(/\b\d+\s*(분|초|minutes?|mins?)\b/gi,' ')
+        .replace(/\b(예|아니오|Yes|No)\b/gi,' ')
+        .replace(/\s+/g,' ')
+        .trim();
+
+      if(!line) continue;
+
+      // "(문혜인의 iPad)" 같은 기기명은 제거하되, 이름 추출에 참고한다.
+      const deviceMatch = line.match(/([가-힣]{2,4})의\s*(?:iPad|iPhone|Galaxy|Android|Phone|PC|Mac)/i);
+      let name = deviceMatch ? normalizeKoreanName(deviceMatch[1]) : '';
+
+      const noParen = line.replace(/\([^)]*\)/g,' ').replace(/\[[^\]]*\]/g,' ').replace(/\s+/g,' ').trim();
+
+      if(!name){
+        // 맨 뒤쪽의 2~4글자 한글 이름 후보를 우선 선택
+        const tokens = noParen.split(/\s+/);
+        for(let i=tokens.length-1; i>=0; i--){
+          const cand = normalizeKoreanName(tokens[i]);
+          if(!cand) continue;
+          if(OCR_STOPWORDS.has(cand)) continue;
+          if(/점$/.test(cand) && cand.length <= 3) continue;
+          if(/대리점|본점|지점|센터|교육|강사|참가자/.test(cand)) continue;
+          name = cand;
+          break;
+        }
+      }
+
+      if(!name) continue;
+
+      // 소속은 이름 앞의 텍스트를 사용
+      let affiliation = noParen;
+      const idx = affiliation.lastIndexOf(name);
+      if(idx >= 0) affiliation = affiliation.slice(0, idx).trim();
+      affiliation = affiliation
+        .replace(/^[\-\d.\s]+/,'')
+        .replace(/\b(호스트|Host|HOST)\b/gi,'')
+        .replace(/\s+/g,' ')
+        .trim();
+
+      // 강사 계정 제외
+      if(/강사|SIA/i.test(line) || /강사|SIA/i.test(affiliation)) continue;
+
+      // OCR이 UI 단어를 이름으로 잘못 잡는 경우 최소 필터
+      if(['참가자','대기실','교육생','회의실','본점','지점'].includes(name)) continue;
+
+      if(!byName.has(name)){
+        byName.set(name, {
+          name,
+          affiliation,
+          joinTime:'',
+          leaveTime:'',
+          durationMin:''
+        });
+      }else if(!byName.get(name).affiliation && affiliation){
+        byName.get(name).affiliation = affiliation;
+      }
+    }
+
+    return Array.from(byName.values());
+  }
+
+  async function extractFromImage(base64, mediaType, onProgress){
+    if(typeof Tesseract === 'undefined'){
+      throw new Error('문자인식 프로그램을 불러오지 못했습니다. 인터넷 연결 또는 회사 보안망에서 jsDelivr 접속이 가능한지 확인해주세요.');
+    }
+
+    const dataUrl = `data:${mediaType || 'image/jpeg'};base64,${base64}`;
+    let result;
     try{
-      resp = await fetch('/api/extract', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ base64, mediaType }),
-        signal: controller.signal
+      result = await Tesseract.recognize(dataUrl, 'kor+eng', {
+        logger: m=>{
+          if(typeof onProgress === 'function'){
+            const pct = typeof m.progress === 'number' ? Math.round(m.progress * 100) : null;
+            const statusMap = {
+              'loading tesseract core':'문자인식 엔진 준비 중',
+              'initializing tesseract':'문자인식 엔진 초기화 중',
+              'loading language traineddata':'한글 인식 데이터 불러오는 중',
+              'initializing api':'한글 인식 준비 중',
+              'recognizing text':'사진의 글자 읽는 중'
+            };
+            onProgress(statusMap[m.status] || '사진 분석 중', pct);
+          }
+        }
       });
     }catch(e){
-      if(e && e.name==='AbortError') throw new Error('사진 인식 시간이 너무 오래 걸렸습니다. 다시 시도해주세요.');
-      throw new Error('AI 인식 서버에 연결하지 못했습니다. 인터넷 연결 또는 Vercel 배포 상태를 확인해주세요.');
-    }finally{ clearTimeout(timer); }
-
-    let data;
-    try{ data = await resp.json(); }
-    catch(e){ throw new Error(`AI 서버 응답을 읽지 못했습니다 (상태 코드 ${resp.status})`); }
-
-    if(!resp.ok){
-      const msg = data && data.error ? data.error : `AI 요청이 실패했습니다 (상태 코드 ${resp.status})`;
-      throw new Error(msg);
+      console.error('Browser OCR error:', e);
+      throw new Error('사진 문자인식에 실패했습니다. 인터넷 연결을 확인하고, 가능하면 화면 캡처 이미지를 다시 올려주세요.');
     }
-    return data;
+
+    const text = result?.data?.text || '';
+    if(!text.trim()){
+      throw new Error('사진에서 글자를 읽지 못했습니다. 글자가 크게 보이도록 화면을 캡처해서 다시 시도해주세요.');
+    }
+
+    const students = parseStudentsFromOcr(text);
+    const meta = extractCourseMeta(text);
+
+    if(students.length === 0){
+      throw new Error('교육생 이름을 자동으로 찾지 못했습니다. 아래의 "사진 없이 직접 입력"을 눌러 입력하거나, 이름이 크게 보이는 캡처로 다시 시도해주세요.');
+    }
+
+    return {
+      courseName: meta.courseName || '',
+      session: meta.session || '',
+      schedule: meta.schedule || '',
+      students,
+      _ocrText: text
+    };
   }
 
   // 카메라 원본 사진은 용량이 크고 일부 폰은 HEIC 등 API가 지원하지 않는 포맷으로 찍히므로,
@@ -387,7 +549,7 @@
         <div id="upload-zone" class="upload-zone">
           <div class="upload-icon">📷</div>
           <div class="upload-txt">사진 촬영 또는 이미지 선택</div>
-          <div class="upload-sub">회의 종료 후 참가자 목록 화면을 찍어주세요</div>
+          <div class="upload-sub">회의 종료 후 참가자 이름이 크게 보이도록 캡처해주세요</div>
         </div>
         <input type="file" id="file-input" accept="image/*" style="display:none;">
         <div id="result-zone"></div>
@@ -414,7 +576,10 @@
       zone.innerHTML = `<img class="preview-img" src="${norm.dataUrl}">`;
       resultZone.innerHTML = `<div class="loading-wrap"><div class="spin"></div>사진에서 이름·시간 인식 중...</div>`;
       try{
-        const parsed = await extractFromImage(norm.base64, norm.mediaType);
+        const parsed = await extractFromImage(norm.base64, norm.mediaType, (status,pct)=>{
+          resultZone.innerHTML = `<div class="loading-wrap"><div class="spin"></div>${esc(status)}${pct!==null?` ${pct}%`:''}</div>
+            <div class="hint" style="text-align:center;">첫 사용 시 한글 문자인식 데이터를 불러오느라 조금 더 걸릴 수 있습니다.</div>`;
+        });
         draftStudents = (parsed.students||[]).map(s=>({
           id: uid(), name: s.name||'', affiliation: s.affiliation||'', joinTime: s.joinTime||'', leaveTime: s.leaveTime||'',
           durationMin: s.durationMin||'', score:null, reason:''
@@ -656,35 +821,57 @@
   }
 
   // ---------- export: excel ----------
-  async function exportXlsx(){
+  function exportXlsx(){
     const s = currentSession;
     const fileBase = buildFileBase(s);
-    try{
-      const resp = await fetch('/api/export-xlsx', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ session: s, fileBase })
-      });
-      if(!resp.ok){
-        let msg = 'Excel 생성에 실패했습니다';
-        try{ const e = await resp.json(); if(e && e.error) msg = e.error; }catch(_){}
-        throw new Error(msg);
-      }
-      const blob = await resp.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${fileBase}.xlsx`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(()=>URL.revokeObjectURL(url), 1500);
-      toast('Excel이 저장되었습니다');
-    }catch(e){
-      console.error('xlsx export fail', e);
-      exportCsvFallback();
-      toast('Excel 서버 연결 실패로 CSV로 저장했습니다');
-    }
+
+    // 서버 없이 Excel이 직접 열 수 있는 HTML 기반 .xls 파일을 만듭니다.
+    const rows = s.students.map(st=>`
+      <tr>
+        <td>${esc(st.name||'')}</td>
+        <td>${esc(st.affiliation||'')}</td>
+        <td>${esc(st.joinTime||'')}</td>
+        <td>${esc(st.leaveTime||'')}</td>
+        <td>${esc(st.durationMin||'')}</td>
+        <td>${st.score===null||st.score===undefined?'':esc(st.score)}</td>
+        <td>${esc(st.reason||'')}</td>
+      </tr>`).join('');
+
+    const excelHtml = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+table{border-collapse:collapse;font-family:"Malgun Gothic",sans-serif;font-size:11pt}
+th,td{border:1px solid #999;padding:6px 8px;vertical-align:top}
+th{font-weight:bold;background:#e9ecff}
+.title{font-size:15pt;font-weight:bold}
+.meta{font-size:10pt}
+</style>
+</head>
+<body>
+<div class="title">${esc(s.title||fileBase)}</div>
+<div class="meta">${esc(s.date||'')}${s.instructor?' · 담당 강사: '+esc(s.instructor):''}</div>
+<br>
+<table>
+<thead><tr>
+<th>이름</th><th>소속</th><th>참가시간</th><th>나간시간</th><th>참여시간(분)</th><th>점수</th><th>사유</th>
+</tr></thead>
+<tbody>${rows}</tbody>
+</table>
+</body>
+</html>`;
+
+    const blob = new Blob(['\uFEFF', excelHtml], {type:'application/vnd.ms-excel;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${fileBase}.xls`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 1500);
+    toast('Excel 파일이 저장되었습니다');
   }
 
   function csvEscape(v){
