@@ -1,3 +1,5 @@
+export const maxDuration = 60;
+
 const PROMPT = `이 이미지는 기업 교육 운영 시스템의 '차수별 학습자 정보' 화면 또는 교육 참가자 명단 화면입니다.
 화면에 실제로 표시된 정보를 정확히 읽어 아래 JSON 형식으로만 응답하세요.
 설명, 마크다운, 코드블록은 절대 출력하지 말고 JSON 객체 하나만 출력하세요.
@@ -79,171 +81,160 @@ const PROMPT = `이 이미지는 기업 교육 운영 시스템의 '차수별 �
   ]
 }`;
 
-function jsonResponse(status, body) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      'Content-Type': 'application/json; charset=utf-8',
-      'Cache-Control': 'no-store'
-    }
-  });
+function sendJson(res, status, body) {
+  res.status(status);
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-store');
+  res.end(JSON.stringify(body));
 }
 
-export default {
-  async fetch(request) {
-    if (request.method !== 'POST') {
-      return jsonResponse(405, {
-        code: 'METHOD_NOT_ALLOWED',
-        message: 'POST 요청만 사용할 수 있습니다.'
-      });
-    }
-
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-
-    if (!apiKey) {
-      return jsonResponse(503, {
-        code: 'SERVER_API_KEY_MISSING',
-        message: 'Vercel 환경 변수 ANTHROPIC_API_KEY가 등록되지 않았습니다.'
-      });
-    }
-
-    try {
-      let body;
-      try {
-        body = await request.json();
-      } catch {
-        return jsonResponse(400, {
-          code: 'INVALID_JSON',
-          message: '요청 데이터를 읽지 못했습니다.'
-        });
-      }
-
-      const base64 = body?.base64;
-      const mediaType = body?.mediaType || 'image/jpeg';
-
-      if (!base64) {
-        return jsonResponse(400, {
-          code: 'IMAGE_MISSING',
-          message: '이미지 데이터가 없습니다.'
-        });
-      }
-
-      const anthropicResp = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01'
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-5',
-          max_tokens: 3500,
-          messages: [{
-            role: 'user',
-            content: [
-              {
-                type: 'image',
-                source: {
-                  type: 'base64',
-                  media_type: mediaType,
-                  data: base64
-                }
-              },
-              {
-                type: 'text',
-                text: PROMPT
-              }
-            ]
-          }]
-        })
-      });
-
-      let raw;
-      try {
-        raw = await anthropicResp.json();
-      } catch {
-        return jsonResponse(502, {
-          code: 'AI_BAD_RESPONSE',
-          message: 'AI 응답을 읽지 못했습니다.'
-        });
-      }
-
-      if (!anthropicResp.ok) {
-        return jsonResponse(anthropicResp.status, {
-          code: 'AI_ERROR',
-          message: raw?.error?.message || `AI 요청 실패 (${anthropicResp.status})`
-        });
-      }
-
-      const textBlock = (raw.content || []).find(x => x.type === 'text');
-      const text = textBlock?.text || '';
-
-      const start = text.indexOf('{');
-      const end = text.lastIndexOf('}');
-
-      if (start < 0 || end < start) {
-        return jsonResponse(502, {
-          code: 'JSON_NOT_FOUND',
-          message: 'AI 응답에서 학습자 정보를 찾지 못했습니다.'
-        });
-      }
-
-      let parsed;
-      try {
-        parsed = JSON.parse(text.slice(start, end + 1));
-      } catch {
-        return jsonResponse(502, {
-          code: 'JSON_PARSE_ERROR',
-          message: 'AI가 반환한 학습자 정보 형식을 읽지 못했습니다.'
-        });
-      }
-
-      const seen = new Set();
-      const students = [];
-
-      for (const s of (parsed.students || [])) {
-        const affiliation = String(s.affiliation || '').trim();
-        const storeName = String(s.storeName || '').trim();
-        const name = String(s.name || '').trim();
-
-        if (!name) continue;
-
-        const combined = `${affiliation} ${storeName} ${name}`;
-
-        if (/학습자\s*승인|출석현황|신청\s*:|승인\s*:|취소|반려|등록학습자|미등록학습자|학습자직접등록|학습자엑셀등록|차수변경/.test(combined)) {
-          continue;
-        }
-
-        const key = `${affiliation}|${storeName}|${name}`.replace(/\s+/g, '');
-
-        if (seen.has(key)) continue;
-        seen.add(key);
-
-        students.push({
-          affiliation,
-          storeName,
-          name,
-          joinTime: '',
-          leaveTime: '',
-          durationMin: ''
-        });
-      }
-
-      return jsonResponse(200, {
-        courseName: parsed.courseName ?? null,
-        session: parsed.session ?? null,
-        schedule: parsed.schedule ?? null,
-        instructor: parsed.instructor ?? null,
-        students
-      });
-
-    } catch (err) {
-      console.error(err);
-
-      return jsonResponse(500, {
-        code: 'SERVER_ERROR',
-        message: err?.message || '사진 인식 중 서버 오류가 발생했습니다.'
-      });
-    }
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return sendJson(res, 405, {
+      code: 'METHOD_NOT_ALLOWED',
+      message: 'POST 요청만 사용할 수 있습니다.'
+    });
   }
-};
+
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+
+  if (!apiKey) {
+    return sendJson(res, 503, {
+      code: 'SERVER_API_KEY_MISSING',
+      message: 'Vercel 환경 변수 ANTHROPIC_API_KEY가 등록되지 않았습니다.'
+    });
+  }
+
+  try {
+    const body = typeof req.body === 'string'
+      ? JSON.parse(req.body)
+      : (req.body || {});
+
+    const base64 = body.base64;
+    const mediaType = body.mediaType || 'image/jpeg';
+
+    if (!base64) {
+      return sendJson(res, 400, {
+        code: 'IMAGE_MISSING',
+        message: '이미지 데이터가 없습니다.'
+      });
+    }
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-5',
+        max_tokens: 3500,
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: mediaType,
+                data: base64
+              }
+            },
+            {
+              type: 'text',
+              text: PROMPT
+            }
+          ]
+        }]
+      })
+    });
+
+    let raw;
+    try {
+      raw = await response.json();
+    } catch {
+      return sendJson(res, 502, {
+        code: 'AI_BAD_RESPONSE',
+        message: 'AI 응답을 읽지 못했습니다.'
+      });
+    }
+
+    if (!response.ok) {
+      return sendJson(res, response.status, {
+        code: 'AI_ERROR',
+        message: raw?.error?.message || `AI 요청 실패 (${response.status})`
+      });
+    }
+
+    const textBlock = (raw.content || []).find(x => x.type === 'text');
+    const text = textBlock?.text || '';
+
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}');
+
+    if (start < 0 || end < start) {
+      return sendJson(res, 502, {
+        code: 'JSON_NOT_FOUND',
+        message: 'AI 응답에서 학습자 정보를 찾지 못했습니다.'
+      });
+    }
+
+    let parsed;
+    try {
+      parsed = JSON.parse(text.slice(start, end + 1));
+    } catch {
+      return sendJson(res, 502, {
+        code: 'JSON_PARSE_ERROR',
+        message: 'AI가 반환한 학습자 정보 형식을 읽지 못했습니다.'
+      });
+    }
+
+    const seen = new Set();
+    const students = [];
+
+    for (const s of (parsed.students || [])) {
+      const affiliation = String(s.affiliation || '').trim();
+      const storeName = String(s.storeName || '').trim();
+      const name = String(s.name || '').trim();
+
+      if (!name) continue;
+
+      const combined = `${affiliation} ${storeName} ${name}`;
+
+      if (/학습자\s*승인|출석현황|신청\s*:|승인\s*:|취소|반려|등록학습자|미등록학습자|학습자직접등록|학습자엑셀등록|차수변경/.test(combined)) {
+        continue;
+      }
+
+      const key = `${affiliation}|${storeName}|${name}`.replace(/\s+/g, '');
+
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      students.push({
+        affiliation,
+        storeName,
+        name,
+        joinTime: '',
+        leaveTime: '',
+        durationMin: ''
+      });
+    }
+
+    return sendJson(res, 200, {
+      courseName: parsed.courseName ?? null,
+      session: parsed.session ?? null,
+      schedule: parsed.schedule ?? null,
+      instructor: parsed.instructor ?? null,
+      students
+    });
+
+  } catch (err) {
+    console.error(err);
+
+    return sendJson(res, 500, {
+      code: 'SERVER_ERROR',
+      message: err?.message || '사진 인식 중 서버 오류가 발생했습니다.'
+    });
+  }
+}
