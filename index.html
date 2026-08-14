@@ -20,6 +20,8 @@
     --shadow: 0 1px 2px rgba(30,27,75,.04), 0 8px 24px rgba(79,70,229,.07);
   }
   *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;min-height:100%;background:#F3F4FD;}
+  body{min-height:100vh;}
   #app-root{
     font-family:-apple-system,BlinkMacSystemFont,'Malgun Gothic','Apple SD Gothic Neo','Segoe UI',sans-serif;
     background:radial-gradient(circle at 12% 0%, #EEF0FF 0%, var(--paper) 42%);
@@ -116,6 +118,45 @@
     display:flex;gap:8px;align-items:center;background:#FAFAFF;
   }
   .student-row input{flex:1;}
+  .student-row.triplet{
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr 34px;
+    gap:7px;
+    align-items:end;
+    padding:11px;
+  }
+  .mini-field{min-width:0;}
+  .mini-label{
+    display:block;
+    font-size:10.5px;
+    font-weight:800;
+    color:var(--sub);
+    margin:0 0 4px 2px;
+  }
+  .student-row.triplet input{
+    width:100%;
+    min-width:0;
+    padding:9px 8px;
+    font-size:13px;
+  }
+  .student-head-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr 34px;
+    gap:7px;
+    padding:0 11px 6px;
+    color:var(--sub);
+    font-size:10.5px;
+    font-weight:800;
+  }
+  @media(max-width:470px){
+    .student-row.triplet{
+      grid-template-columns:1fr 1fr 34px;
+    }
+    .student-row.triplet .student-name-field{
+      grid-column:1 / 3;
+    }
+    .student-head-grid{display:none;}
+  }
   .rm-btn{
     width:28px;height:28px;border-radius:9px;border:none;background:#FEE2E2;
     color:var(--red);font-weight:800;cursor:pointer;flex-shrink:0;
@@ -168,14 +209,17 @@
 </style>
 </head>
 <body>
+<div style="position:fixed;right:10px;bottom:10px;z-index:99999;background:#111827;color:#fff;padding:7px 10px;border-radius:999px;font:700 11px/1.2 -apple-system,BlinkMacSystemFont,'Malgun Gothic',sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.18);">V4 · API 키 불필요 · 브라우저 OCR</div>
 
 <div id="app-root">
   <div class="shell" id="shell"></div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- 서버 API 없이 브라우저 안에서 OCR 실행 -->
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
 <script>
+console.log('attendance-app V4 - local browser OCR - no API key required');
 (function(){
   try{ document.title = '천하무적동부교육팀 교육생 만족도 체크'; }catch(e){}
   const shell = document.getElementById('shell');
@@ -192,30 +236,16 @@
   ];
 
   // ---------- storage helpers ----------
-  // Claude 아티팩트 안에서는 window.storage(클라우드 저장)를 쓰고,
-  // Vercel/Netlify 등 독립 배포 환경에서는 자동으로 localStorage(이 브라우저 안에만 저장)로 전환된다.
-  const HAS_CLAUDE_STORAGE = (typeof window !== 'undefined') && !!window.storage && typeof window.storage.get === 'function';
-
+  // 공개 웹 배포 버전: 기록은 각 사용자의 브라우저 localStorage에 저장됩니다.
+  // 따라서 같은 URL을 사용해도 기기/브라우저별 기록은 서로 섞이지 않습니다.
   async function kvGet(key){
-    if(HAS_CLAUDE_STORAGE){
-      try{ const r = await window.storage.get(key, false); return r ? r.value : null; }
-      catch(e){ return null; }
-    }
     try{ return window.localStorage.getItem(key); }catch(e){ return null; }
   }
   async function kvSet(key, value){
-    if(HAS_CLAUDE_STORAGE){
-      try{ const r = await window.storage.set(key, value, false); return !!r; }
-      catch(e){ console.error('kvSet fail', e); return false; }
-    }
     try{ window.localStorage.setItem(key, value); return true; }
     catch(e){ console.error('kvSet fail', e); return false; }
   }
   async function kvDelete(key){
-    if(HAS_CLAUDE_STORAGE){
-      try{ await window.storage.delete(key, false); }catch(e){}
-      return;
-    }
     try{ window.localStorage.removeItem(key); }catch(e){}
   }
 
@@ -232,7 +262,10 @@
   async function getSession(id){
     try{
       const v = await kvGet('session:'+id);
-      return v ? JSON.parse(v) : null;
+      if(!v) return null;
+      const s = JSON.parse(v);
+      s.students = (s.students||[]).map(normalizeStudentRecord);
+      return s;
     }catch(e){ return null; }
   }
   async function saveSession(sess){
@@ -261,6 +294,161 @@
     }catch(e){ console.error('delete fail', e); }
   }
 
+
+  function canonical(v){
+    return String(v||'')
+      .toLowerCase()
+      .replace(/\s+/g,'')
+      .replace(/[()[\]{}_\-.,:;/'"\\]/g,'')
+      .trim();
+  }
+
+  function canonicalName(v){
+    return String(v||'').replace(/[^가-힣A-Za-z]/g,'').toLowerCase();
+  }
+
+  function canonicalDate(v){
+    return String(v||'').replace(/[^\d]/g,'');
+  }
+
+  function sessionKey(courseName, session, date){
+    return [canonical(courseName), canonical(session), canonicalDate(date)].join('|');
+  }
+
+  // 기존 구버전의 "소속" 한 칸에 "대리점 + 매장명"이 함께 들어 있던 데이터를
+  // 새 구조(소속/매장명)로 최대한 안전하게 분리한다.
+  function splitAffiliationStore(raw){
+    raw = String(raw||'').replace(/\s+/g,' ').trim();
+    if(!raw) return {affiliation:'', storeName:''};
+
+    const tokens = raw.split(' ').filter(Boolean);
+    const storePattern = /(본점|지점|직영점|대리점점|센터|매장|스토어|플라자|점)$/;
+
+    if(tokens.length >= 2 && storePattern.test(tokens[tokens.length-1])){
+      return {
+        affiliation: tokens.slice(0,-1).join(' ').trim(),
+        storeName: tokens[tokens.length-1].trim()
+      };
+    }
+
+    // "한백외동점"처럼 띄어쓰기가 전혀 없는 경우에는
+    // 억지로 소속을 추측하지 않고 전체를 매장명으로 둔다.
+    if(tokens.length === 1){
+      return {affiliation:'', storeName:raw};
+    }
+
+    // 구조가 애매하면 오인식을 피하기 위해 전체를 매장명으로 둔다.
+    return {affiliation:'', storeName:raw};
+  }
+
+  function normalizeStudentRecord(st){
+    st = st || {};
+    const split = splitAffiliationStore(st.affiliation || '');
+    return {
+      id: st.id || uid(),
+      affiliation: String(st.organization || st.affiliationOrg || split.affiliation || '').trim(),
+      storeName: String(st.storeName || split.storeName || '').trim(),
+      name: String(st.name || '').trim(),
+      score: st.score===undefined ? null : st.score,
+      reason: st.reason || '',
+      joinTime: st.joinTime || '',
+      leaveTime: st.leaveTime || '',
+      durationMin: st.durationMin || ''
+    };
+  }
+
+  function mergeStudents(baseStudents, newStudents){
+    const byName = new Map();
+
+    const put = (raw, preferExisting)=>{
+      const st = normalizeStudentRecord(raw);
+      const key = canonicalName(st.name);
+      if(!key) return;
+
+      if(!byName.has(key)){
+        byName.set(key, st);
+        return;
+      }
+
+      const old = byName.get(key);
+      const merged = {
+        ...old,
+        // 기존 강사 수정값/평가값을 우선 보존
+        affiliation: old.affiliation || st.affiliation,
+        storeName: old.storeName || st.storeName,
+        name: old.name || st.name,
+        score: (old.score!==null && old.score!==undefined && old.score!=='') ? old.score : st.score,
+        reason: old.reason || st.reason,
+        joinTime: old.joinTime || st.joinTime,
+        leaveTime: old.leaveTime || st.leaveTime,
+        durationMin: old.durationMin || st.durationMin
+      };
+      byName.set(key, merged);
+    };
+
+    (baseStudents||[]).forEach(s=>put(s,true));
+    (newStudents||[]).forEach(s=>put(s,false));
+    return Array.from(byName.values());
+  }
+
+  async function findExistingSession(courseName, session, date){
+    const target = sessionKey(courseName, session, date);
+    const idx = await getIndex();
+    for(const e of idx){
+      const s = await getSession(e.id);
+      if(!s) continue;
+      if(sessionKey(s.courseName || '', s.session || '', s.date || '') === target){
+        return s;
+      }
+    }
+    return null;
+  }
+
+  // 이전 버전에서 같은 과정/차수/날짜가 여러 번 저장된 경우 자동으로 한 건으로 합친다.
+  async function consolidateDuplicateSessions(){
+    const idx = await getIndex();
+    if(idx.length < 2) return;
+
+    const groups = new Map();
+    let changed = false;
+
+    for(const entry of idx){
+      const s = await getSession(entry.id);
+      if(!s) continue;
+
+      s.students = mergeStudents([], s.students || []);
+      const key = sessionKey(s.courseName || '', s.session || '', s.date || '');
+
+      if(!groups.has(key)){
+        groups.set(key, s);
+      }else{
+        const keep = groups.get(key);
+        keep.students = mergeStudents(keep.students, s.students);
+        keep.instructor = keep.instructor || s.instructor || '';
+        await kvDelete('session:'+s.id);
+        changed = true;
+      }
+    }
+
+    if(!changed) return;
+
+    const newIdx = [];
+    for(const s of groups.values()){
+      await kvSet('session:'+s.id, JSON.stringify(s));
+      const scoredCount = s.students.filter(st=>st.score!==null && st.score!==undefined && st.score!=='').length;
+      newIdx.push({
+        id:s.id,
+        title:s.title,
+        date:s.date,
+        count:s.students.length,
+        scoredCount,
+        done:scoredCount===s.students.length && s.students.length>0
+      });
+    }
+    await saveIndex(newIdx);
+  }
+
+
   function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
   function toast(msg){
     const t=document.createElement('div');
@@ -272,97 +460,226 @@
     return (s===undefined||s===null?'':String(s)).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
 
-  // ---------- OCR via Claude vision ----------
-  async function extractFromImage(base64, mediaType){
-    const prompt = `이 이미지는 Zoom 화상회의 종료 후 참가자 목록 화면입니다.
-화면에 보이는 모든 실제 교육생(호스트/강사 계정은 제외)을 아래 JSON 형식으로만 응답하세요.
-설명, 코드블록, 마크다운 없이 순수 JSON 객체 하나만 출력하세요.
+  // ---------- 브라우저 OCR ----------
+  // 서버 API / API Key / Vercel Function을 사용하지 않습니다.
+  // 이미지 문자인식은 사용자의 브라우저에서 Tesseract.js로 실행됩니다.
 
-같은 사람이 재접속 등으로 여러 번 나오면, 가장 정보가 온전한(가장 오래 머문) 한 줄로 합쳐서 한 명당 한 번만 포함하세요.
-참가/나간 시간이나 접속시간(분)이 화면에 없으면 빈 문자열로 두세요.
+  const OCR_STOPWORDS = new Set([
+    '참가자','참가자목록','참가','목록','이름','회의','회의정보','대기실','호스트',
+    '교육강사','강사','나','초대','모두음소거','음소거','비디오','오디오',
+    '채팅','반응','화면공유','보안','기록','종료','나가기','검색','더보기',
+    'zoom','ZOOM','Zoom','SIA','sia'
+  ]);
 
-화면에 표시된 참가자 이름에는 다음처럼 여러 형태가 섞여 있을 수 있습니다.
-- "민유량" (사람 이름만)
-- "다울 본점 민유량" (대리점명 + 이름)
-- "18차수 다울 본점 민유량" (차수 + 대리점명 + 이름)
-- "다울본점_민유량", "다울본점-민유량" (구분자로 연결된 경우)
+  function cleanOcrLine(line){
+    return String(line || '')
+      .replace(/[|•●■□◆◇▶►※]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
 
-이 중 사람의 실제 이름만 name에, 대리점/매장/지점명만 affiliation에 담으세요.
-차수·기수·날짜·숫자만 있는 조각·괄호 안 부가정보처럼 사람 이름도 대리점명도 아닌 나머지 텍스트는
-name과 affiliation 어디에도 넣지 말고 버리세요. 특히 "차수"라는 글자가 포함된 부분은
-그 교육생의 것이 아니라 교육과정 전체의 차수 정보이므로 절대 name이나 affiliation에 포함하지 마세요.
-대리점명을 구분할 수 없으면 affiliation은 빈 문자열로 두세요.
+  function normalizeKoreanName(raw){
+    let s = String(raw || '').trim();
+    s = s.replace(/의\s*(iPad|iPhone|Galaxy|Android|Phone|PC|Mac).*$/i, '');
+    s = s.replace(/[^\uAC00-\uD7A3]/g, '');
+    return /^[가-힣]{2,4}$/.test(s) ? s : '';
+  }
 
-화면 상단의 회의 주제/제목 텍스트에서 다음을 분리해서 읽어주세요. 확실하지 않으면 null로 두세요.
-- courseName: 교육과정명 (예: "[부산] 유선인증과정 BOOST(8월)")
-- session: 차수 (예: 제목에 "18차수"가 있으면 "18", 없으면 null)
-- schedule: 진행 일정/날짜. 화면에 보이는 회의 날짜나 시작 시각(예: "2026-08-12" 또는 "08/12/2026")을 그대로 옮겨 적으세요.
+  function looksLikeUiLine(line){
+    const compact = line.replace(/\s/g,'');
+    if(!compact) return true;
+    if(/^\d{1,2}[:.]\d{2}/.test(line)) return true;
+    if(/^\d+%?$/.test(compact)) return true;
+    for(const w of OCR_STOPWORDS){
+      if(compact === String(w).replace(/\s/g,'')) return true;
+    }
+    if(/참가자|대기실|모두\s*음소거|화면\s*공유|회의\s*종료|오디오|비디오/i.test(line)) return true;
+    return false;
+  }
 
-{
-  "courseName": "교육과정명 (없으면 null)",
-  "session": "차수 (없으면 null)",
-  "schedule": "진행 일정/날짜 (없으면 null)",
-  "students": [
-    {"name": "사람 이름만 (차수·소속 제외)", "affiliation": "대리점명만 (차수 제외)", "joinTime": "", "leaveTime": "", "durationMin": ""}
-  ]
-}`;
-    const headers = {'Content-Type':'application/json'};
-    // Claude 아티팩트 안에서만 통하는 특수 모델 별칭과, 사용자가 직접 발급받은 키로
-    // 실제 공개 API를 호출할 때 써야 하는 모델명이 다르다.
-    let model = 'claude-sonnet-4-6';
-    // Claude 아티팩트 환경 밖(독립 배포)에서는 이 앱이 직접 Anthropic API를 호출해야 하므로
-    // 사용자가 설정에 등록해둔 본인의 API 키를 붙인다.
-    if(!HAS_CLAUDE_STORAGE){
-      const apiKey = (window.localStorage.getItem('anthropic-api-key')||'').trim();
-      if(!apiKey){
-        const err = new Error('API_KEY_MISSING');
-        err.code = 'API_KEY_MISSING';
-        throw err;
+  function extractCourseMeta(text){
+    const lines = String(text || '')
+      .split(/\r?\n/)
+      .map(cleanOcrLine)
+      .filter(Boolean);
+
+    let courseName = '';
+    let session = '';
+    let schedule = '';
+    let instructor = '';
+
+    for(const line of lines){
+      if(!session){
+        const m = line.match(/(\d{1,3})\s*차수/);
+        if(m) session = m[1];
       }
-      headers['x-api-key'] = apiKey;
-      headers['anthropic-version'] = '2023-06-01';
-      headers['anthropic-dangerous-direct-browser-access'] = 'true';
-      model = 'claude-sonnet-5'; // 실제 공개 API에 존재하는 모델명
-    }
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST',
-      headers,
-      body: JSON.stringify({
-        model,
-        max_tokens:2500,
-        messages:[{
-          role:'user',
-          content:[
-            {type:'image', source:{type:'base64', media_type: mediaType, data: base64}},
-            {type:'text', text: prompt}
-          ]
-        }]
-      })
-    });
-    let data;
-    try{ data = await resp.json(); }
-    catch(e){ throw new Error('서버 응답을 읽지 못했습니다'); }
 
-    if(!resp.ok){
-      const msg = (data && data.error && data.error.message) ? data.error.message : `요청이 실패했습니다 (상태 코드 ${resp.status})`;
-      throw new Error(msg);
-    }
-    const block = (data.content||[]).find(b=>b.type==='text');
-    if(!block || !block.text){ throw new Error('모델이 빈 응답을 반환했습니다'); }
+      if(!schedule){
+        const d = line.match(/(20\d{2}[.\-/]\s*\d{1,2}[.\-/]\s*\d{1,2}|\d{1,2}[.\-/]\s*\d{1,2}[.\-/]\s*20\d{2})/);
+        if(d) schedule = d[1].replace(/\s/g,'');
+      }
 
-    // 모델이 코드블록이나 부연 설명을 덧붙이는 경우까지 방어적으로 처리 —
-    // 텍스트 안에서 가장 바깥쪽 { ... } 구간만 뽑아서 파싱한다.
-    const start = block.text.indexOf('{');
-    const end = block.text.lastIndexOf('}');
-    if(start === -1 || end === -1 || end < start){
-      throw new Error('응답에서 인식 결과를 찾지 못했습니다');
+      if(!instructor){
+        let m = line.match(/(?:담당\s*)?강사(?:명)?\s*[:：\-]?\s*([가-힣]{2,4})/);
+        if(!m) m = line.match(/([가-힣]{2,4})\s*강사(?:님)?/);
+        if(m && !/교육|담당|진행|회의/.test(m[1])) instructor = m[1];
+      }
     }
-    const jsonSlice = block.text.slice(start, end+1);
+
+    // 과정명은 참가자/교육생 줄을 절대 사용하지 않고,
+    // "과정/교육/BOOST/NPS/Btv/max" 등 과정명 성격이 있는 줄에서만 선택
+    const candidates = lines.filter(line =>
+      /교육|과정|BOOST|NPS|Btv|max|인증/i.test(line) &&
+      !/참가자|교육생|학습자|대기실|호스트|담당\s*강사/i.test(line) &&
+      !looksLikeUiLine(line)
+    );
+
+    if(candidates.length){
+      courseName = candidates[0]
+        .replace(/\d{1,3}\s*차수.*$/,'')
+        .replace(/20\d{2}[.\-/]\s*\d{1,2}[.\-/]\s*\d{1,2}.*$/,'')
+        .trim();
+    }
+
+    return {courseName, session, schedule, instructor};
+  }
+
+  function parseStudentsFromOcr(text){
+    const lines = String(text || '')
+      .split(/\r?\n/)
+      .map(cleanOcrLine)
+      .filter(Boolean);
+
+    const byName = new Map();
+
+    for(let line of lines){
+      if(looksLikeUiLine(line)) continue;
+
+      // 과정 정보 / 날짜 / 차수 / 강사 정보는 학생으로 인식하지 않는다.
+      if(/과정명|교육과정|진행\s*일정|날짜|차수|담당\s*강사|강사명/.test(line)) continue;
+      if(/20\d{2}[.\-/]\s*\d{1,2}[.\-/]\s*\d{1,2}/.test(line)) continue;
+
+      // Zoom 상태/시간/기기 표시 제거
+      line = line
+        .replace(/\b\d{1,2}:\d{2}(?::\d{2})?\b/g,' ')
+        .replace(/\b\d+\s*(분|초|minutes?|mins?)\b/gi,' ')
+        .replace(/\b(예|아니오|Yes|No|음소거됨|음소거해제)\b/gi,' ')
+        .replace(/\s+/g,' ')
+        .trim();
+
+      if(!line) continue;
+
+      // "(문혜인의 iPad)" 같은 경우 사람 이름을 우선 사용
+      const deviceMatch = line.match(/([가-힣]{2,4})의\s*(?:iPad|iPhone|Galaxy|Android|Phone|PC|Mac)/i);
+      let name = deviceMatch ? normalizeKoreanName(deviceMatch[1]) : '';
+
+      const noParen = line
+        .replace(/\([^)]*\)/g,' ')
+        .replace(/\[[^\]]*\]/g,' ')
+        .replace(/\s+/g,' ')
+        .trim();
+
+      const tokens = noParen.split(/\s+/).filter(Boolean);
+
+      if(!name){
+        // 학생 이름은 기본적으로 줄의 맨 끝 토큰에서 찾는다.
+        const last = tokens[tokens.length-1] || '';
+        const cand = normalizeKoreanName(last);
+        if(cand && !OCR_STOPWORDS.has(cand) &&
+           !/대리점|본점|지점|센터|매장|교육|강사|참가자|학습자|교육생/.test(cand)){
+          name = cand;
+        }
+      }
+
+      if(!name) continue;
+      if(/강사|SIA/i.test(line)) continue;
+
+      // 이름 앞부분만 소속/매장명 후보로 사용
+      let prefix = noParen;
+      const nameIdx = prefix.lastIndexOf(name);
+      if(nameIdx >= 0) prefix = prefix.slice(0,nameIdx).trim();
+
+      prefix = prefix
+        .replace(/^[\-\d.\s]+/,'')
+        .replace(/\b(호스트|Host|HOST)\b/gi,'')
+        .replace(/\s+/g,' ')
+        .trim();
+
+      const split = splitAffiliationStore(prefix);
+
+      const student = normalizeStudentRecord({
+        name,
+        affiliation: split.affiliation,
+        storeName: split.storeName,
+        score:null,
+        reason:''
+      });
+
+      // 같은 화면 또는 여러 캡처에서 같은 이름이 반복되면 1명만 남긴다.
+      const key = canonicalName(student.name);
+      if(!key) continue;
+
+      if(!byName.has(key)){
+        byName.set(key, student);
+      }else{
+        const old = byName.get(key);
+        old.affiliation = old.affiliation || student.affiliation;
+        old.storeName = old.storeName || student.storeName;
+        byName.set(key, old);
+      }
+    }
+
+    return Array.from(byName.values());
+  }
+
+  async function extractFromImage(base64, mediaType, onProgress){
+    if(typeof Tesseract === 'undefined'){
+      throw new Error('문자인식 프로그램을 불러오지 못했습니다. 인터넷 연결 또는 회사 보안망에서 jsDelivr 접속이 가능한지 확인해주세요.');
+    }
+
+    const dataUrl = `data:${mediaType || 'image/jpeg'};base64,${base64}`;
+    let result;
     try{
-      return JSON.parse(jsonSlice);
+      result = await Tesseract.recognize(dataUrl, 'kor+eng', {
+        logger: m=>{
+          if(typeof onProgress === 'function'){
+            const pct = typeof m.progress === 'number' ? Math.round(m.progress * 100) : null;
+            const statusMap = {
+              'loading tesseract core':'문자인식 엔진 준비 중',
+              'initializing tesseract':'문자인식 엔진 초기화 중',
+              'loading language traineddata':'한글 인식 데이터 불러오는 중',
+              'initializing api':'한글 인식 준비 중',
+              'recognizing text':'사진의 글자 읽는 중'
+            };
+            onProgress(statusMap[m.status] || '사진 분석 중', pct);
+          }
+        }
+      });
     }catch(e){
-      throw new Error('인식 결과 형식이 올바르지 않습니다');
+      console.error('Browser OCR error:', e);
+      throw new Error('사진 문자인식에 실패했습니다. 인터넷 연결을 확인하고, 가능하면 화면 캡처 이미지를 다시 올려주세요.');
     }
+
+    const text = result?.data?.text || '';
+    if(!text.trim()){
+      throw new Error('사진에서 글자를 읽지 못했습니다. 글자가 크게 보이도록 화면을 캡처해서 다시 시도해주세요.');
+    }
+
+    const students = parseStudentsFromOcr(text);
+    const meta = extractCourseMeta(text);
+
+    if(students.length === 0){
+      throw new Error('교육생 이름을 자동으로 찾지 못했습니다. 아래의 "사진 없이 직접 입력"을 눌러 입력하거나, 이름이 크게 보이는 캡처로 다시 시도해주세요.');
+    }
+
+    return {
+      courseName: meta.courseName || '',
+      session: meta.session || '',
+      schedule: meta.schedule || '',
+      instructor: meta.instructor || '',
+      students,
+      _ocrText: text
+    };
   }
 
   // 카메라 원본 사진은 용량이 크고 일부 폰은 HEIC 등 API가 지원하지 않는 포맷으로 찍히므로,
@@ -416,23 +733,22 @@ name과 affiliation 어디에도 넣지 말고 버리세요. 특히 "차수"라�
 
   // ---------- render: list view ----------
   async function renderList(){
+    await consolidateDuplicateSessions();
     shell.innerHTML = `
       <div class="topbar">
         <div class="brand">
           <div class="brand-mark">✓</div>
           <div>
             <div class="brand-title">천하무적동부교육팀<br>교육생 만족도 체크</div>
-            <div class="brand-sub">Zoom 캡처 한 장으로 등록</div>
+            <div class="brand-sub">Zoom 캡처 · 모바일/PC 공용</div>
           </div>
         </div>
-        ${HAS_CLAUDE_STORAGE ? '' : '<button class="btn-ghost btn-sm" id="settings-btn">⚙️ 설정</button>'}
+        <span class="badge badge-done">WEB</span>
       </div>
-      <button class="btn btn-amber" id="new-btn">＋ Zoom 화면 사진으로 새 출석 등록</button>
+      <button class="btn btn-amber" id="new-btn">＋ Zoom 화면 사진으로 새 차수 등록</button>
       <div class="card" style="margin-top:16px;padding:10px 6px;" id="list-wrap"></div>
     `;
     document.getElementById('new-btn').onclick = ()=> renderUpload();
-    const settingsBtn = document.getElementById('settings-btn');
-    if(settingsBtn) settingsBtn.onclick = ()=> renderSettings();
     const wrap = document.getElementById('list-wrap');
     wrap.innerHTML = `<div class="loading-wrap"><div class="spin"></div>불러오는 중...</div>`;
     const idx = await getIndex();
@@ -466,7 +782,7 @@ name과 affiliation 어디에도 넣지 말고 버리세요. 특히 "차수"라�
         <div id="upload-zone" class="upload-zone">
           <div class="upload-icon">📷</div>
           <div class="upload-txt">사진 촬영 또는 이미지 선택</div>
-          <div class="upload-sub">회의 종료 후 참가자 목록 화면을 찍어주세요</div>
+          <div class="upload-sub">회의 종료 후 참가자 이름이 크게 보이도록 캡처해주세요</div>
         </div>
         <input type="file" id="file-input" accept="image/*" style="display:none;">
         <div id="result-zone"></div>
@@ -491,32 +807,20 @@ name과 affiliation 어디에도 넣지 말고 버리세요. 특히 "차수"라�
         return;
       }
       zone.innerHTML = `<img class="preview-img" src="${norm.dataUrl}">`;
-      resultZone.innerHTML = `<div class="loading-wrap"><div class="spin"></div>사진에서 이름·시간 인식 중...</div>`;
+      resultZone.innerHTML = `<div class="loading-wrap"><div class="spin"></div>사진에서 과정 정보와 교육생 정보를 인식 중...</div>`;
       try{
-        const parsed = await extractFromImage(norm.base64, norm.mediaType);
-        draftStudents = (parsed.students||[]).map(s=>({
-          id: uid(), name: s.name||'', affiliation: s.affiliation||'', joinTime: s.joinTime||'', leaveTime: s.leaveTime||'',
-          durationMin: s.durationMin||'', score:null, reason:''
-        }));
+        const parsed = await extractFromImage(norm.base64, norm.mediaType, (status,pct)=>{
+          resultZone.innerHTML = `<div class="loading-wrap"><div class="spin"></div>${esc(status)}${pct!==null?` ${pct}%`:''}</div>
+            <div class="hint" style="text-align:center;">첫 사용 시 한글 문자인식 데이터를 불러오느라 조금 더 걸릴 수 있습니다.</div>`;
+        });
+        draftStudents = mergeStudents([], (parsed.students||[]).map(s=>normalizeStudentRecord(s)));
         renderDraftEditor({
           courseName: parsed.courseName || '',
           session: parsed.session || '',
-          schedule: parsed.schedule || ''
+          schedule: parsed.schedule || '',
+          instructor: parsed.instructor || ''
         });
       }catch(err){
-        if(err.code === 'API_KEY_MISSING'){
-          resultZone.innerHTML = `<div class="hint" style="color:var(--red);">사진 인식을 사용하려면 먼저 Anthropic API 키를 등록해야 합니다.</div>
-            <div class="row" style="margin-top:10px;">
-              <button class="btn btn-primary btn-sm" id="goto-settings-btn">API 키 등록하기</button>
-              <button class="btn btn-outline btn-sm" id="manual-btn">사진 없이 직접 입력</button>
-            </div>`;
-          document.getElementById('goto-settings-btn').onclick = ()=> renderSettings();
-          document.getElementById('manual-btn').onclick = ()=>{
-            draftStudents = [];
-            renderDraftEditor({courseName:'', session:'', schedule:''});
-          };
-          return;
-        }
         resultZone.innerHTML = `<div class="hint" style="color:var(--red);">인식에 실패했습니다: ${esc(err.message || '알 수 없는 오류')}</div>
           <div class="row" style="margin-top:10px;">
             <button class="btn btn-outline btn-sm" id="retry-btn">다시 촬영/선택</button>
@@ -525,43 +829,9 @@ name과 affiliation 어디에도 넣지 말고 버리세요. 특히 "차수"라�
         document.getElementById('retry-btn').onclick = ()=> renderUpload();
         document.getElementById('manual-btn').onclick = ()=>{
           draftStudents = [];
-          renderDraftEditor({courseName:'', session:'', schedule:''});
+          renderDraftEditor({courseName:'', session:'', schedule:'', instructor:''});
         };
       }
-    };
-  }
-
-  // ---------- render: settings (API key) — 독립 배포 환경에서만 노출 ----------
-  function renderSettings(){
-    const saved = (window.localStorage.getItem('anthropic-api-key')||'');
-    shell.innerHTML = `
-      <div class="topbar">
-        <button class="back-btn" id="back-btn">← 목록</button>
-      </div>
-      <div class="card">
-        <label class="field-label" style="margin-top:0;">Anthropic API 키</label>
-        <input type="text" id="key-input" value="${esc(saved)}" placeholder="sk-ant-...">
-        <div class="hint">
-          이 키는 서버로 전송되지 않고 이 브라우저(이 기기)에만 저장되며, 사진에서 이름·시간을 자동으로 읽는 기능에만 사용됩니다.
-          <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener" style="color:var(--navy);font-weight:700;">console.anthropic.com</a>에서 발급받을 수 있습니다.
-        </div>
-        <button class="btn btn-primary" id="save-key-btn" style="margin-top:16px;">저장</button>
-        ${saved? '<button class="btn btn-outline" id="clear-key-btn" style="margin-top:8px;">키 삭제</button>' : ''}
-      </div>
-    `;
-    document.getElementById('back-btn').onclick = ()=> renderList();
-    document.getElementById('save-key-btn').onclick = ()=>{
-      const v = document.getElementById('key-input').value.trim();
-      if(v===''){ toast('API 키를 입력해주세요'); return; }
-      window.localStorage.setItem('anthropic-api-key', v);
-      toast('저장되었습니다');
-      renderList();
-    };
-    const clearBtn = document.getElementById('clear-key-btn');
-    if(clearBtn) clearBtn.onclick = ()=>{
-      window.localStorage.removeItem('anthropic-api-key');
-      toast('삭제되었습니다');
-      renderSettings();
     };
   }
 
@@ -569,35 +839,98 @@ name과 affiliation 어디에도 넣지 말고 버리세요. 특히 "차수"라�
     const resultZone = document.getElementById('result-zone');
     const today = new Date();
     const todayStr = `${today.getFullYear()}.${String(today.getMonth()+1).padStart(2,'0')}.${String(today.getDate()).padStart(2,'0')}`;
+
     resultZone.innerHTML = `
       <label class="field-label">2. 교육과정 정보 확인</label>
-      <input type="text" id="course-input" value="${esc(guess.courseName)}" placeholder="교육과정명 (예: [부산] 유선인증과정 BOOST(8월))">
-      <input type="text" id="session-input" value="${esc(guess.session)}" placeholder="차수 (숫자만 입력해도 자동으로 '차수'가 붙습니다. 예: 18)" style="margin-top:8px;">
-      <input type="text" id="schedule-input" value="${esc(guess.schedule || todayStr)}" placeholder="진행 일정 (예: 2026.08.12)" style="margin-top:8px;">
-      <input type="text" id="instructor-input" placeholder="담당 강사" style="margin-top:8px;">
-      <div class="hint" style="margin-top:6px;">사진에서 자동으로 읽은 값입니다. 틀렸거나 비어 있으면 직접 고쳐주세요. 저장 후에도 언제든 다시 수정할 수 있습니다.</div>
-      <label class="field-label">3. 인식된 교육생 (${draftStudents.length}명) — 필요하면 수정하세요</label>
+
+      <label class="mini-label">과정명</label>
+      <input type="text" id="course-input" value="${esc(guess.courseName||'')}" placeholder="예: [부산] 유선인증과정 BOOST(8월)">
+
+      <label class="mini-label" style="margin-top:8px;">차수</label>
+      <input type="text" id="session-input" value="${esc(guess.session||'')}" placeholder="예: 18 또는 18차수">
+
+      <label class="mini-label" style="margin-top:8px;">날짜</label>
+      <input type="text" id="schedule-input" value="${esc(guess.schedule || todayStr)}" placeholder="예: 2026.08.12">
+
+      <label class="mini-label" style="margin-top:8px;">강사</label>
+      <input type="text" id="instructor-input" value="${esc(guess.instructor||'')}" placeholder="담당 강사">
+
+      <div class="hint" style="margin-top:7px;">
+        위 4개 항목만 사진에서 자동 입력합니다. 자동 인식값이 다르면 여기서 바로 수정하세요.
+      </div>
+
+      <label class="field-label">3. 교육생 정보 확인 (${draftStudents.length}명)</label>
+      <div class="student-head-grid">
+        <div>소속</div><div>매장명</div><div>이름</div><div></div>
+      </div>
       <div id="draft-list"></div>
-      <button class="btn btn-outline btn-sm" id="add-row-btn" style="margin-top:4px;">+ 교육생 수동 추가</button>
-      <div class="hint">이름이 잘못 인식됐거나 빠진 사람이 있으면 직접 고쳐주세요. 점수·사유는 다음 단계에서 입력합니다.</div>
-      <button class="btn btn-primary" id="save-draft-btn" style="margin-top:16px;">이 명단으로 저장하기</button>
+
+      <button class="btn btn-outline btn-sm" id="add-row-btn" style="margin-top:4px;">+ 교육생 직접 추가</button>
+      <div class="hint">
+        교육생은 <b>소속 / 매장명 / 이름</b>만 저장합니다. 같은 이름이 여러 번 인식되면 자동으로 1명으로 합칩니다.
+      </div>
+      <button class="btn btn-primary" id="save-draft-btn" style="margin-top:16px;">명단 저장하고 태도 입력하기</button>
     `;
+
     renderDraftRows();
+
     document.getElementById('add-row-btn').onclick = ()=>{
-      draftStudents.push({id:uid(), name:'', affiliation:'', joinTime:'', leaveTime:'', durationMin:'', score:null, reason:''});
+      draftStudents.push(normalizeStudentRecord({
+        id:uid(), affiliation:'', storeName:'', name:'', score:null, reason:''
+      }));
       renderDraftRows();
     };
+
     document.getElementById('save-draft-btn').onclick = async ()=>{
       const courseName = document.getElementById('course-input').value.trim();
       const session = normalizeSession(document.getElementById('session-input').value);
       const schedule = document.getElementById('schedule-input').value.trim() || todayStr;
       const instructor = document.getElementById('instructor-input').value.trim();
-      if(courseName===''){ toast('교육과정명을 입력해주세요'); return; }
-      const cleaned = draftStudents.filter(s=>s.name.trim()!=='');
-      if(cleaned.length===0){ toast('교육생을 최소 1명 입력해주세요'); return; }
-      const sess = { id: uid(), courseName, session, instructor, title: buildTitle(courseName, session), date: schedule, students: cleaned };
+
+      if(courseName===''){
+        toast('과정명을 입력해주세요');
+        return;
+      }
+
+      const cleaned = mergeStudents([], draftStudents.filter(s=>String(s.name||'').trim()!==''));
+      if(cleaned.length===0){
+        toast('교육생을 최소 1명 입력해주세요');
+        return;
+      }
+
+      // 같은 과정 + 같은 차수 + 같은 날짜가 이미 있으면 새 차수를 만들지 않고 갱신
+      let sess = await findExistingSession(courseName, session, schedule);
+
+      if(sess){
+        sess.courseName = courseName;
+        sess.session = session;
+        sess.instructor = instructor || sess.instructor || '';
+        sess.title = buildTitle(courseName, session);
+        sess.date = schedule;
+        sess.students = mergeStudents(sess.students || [], cleaned);
+
+        const ok = await saveSession(sess);
+        toast(ok
+          ? '기존 차수에 중복 없이 명단을 반영했습니다.'
+          : '저장에 실패했습니다');
+        if(ok) renderDetail(sess.id);
+        return;
+      }
+
+      sess = {
+        id: uid(),
+        courseName,
+        session,
+        instructor,
+        title: buildTitle(courseName, session),
+        date: schedule,
+        students: cleaned
+      };
+
       const ok = await saveSession(sess);
-      toast(ok? '명단이 저장되었습니다. 이어서 태도를 입력해보세요.' : '저장에 실패했습니다');
+      toast(ok
+        ? '명단이 저장되었습니다. 이어서 태도를 입력하세요.'
+        : '저장에 실패했습니다');
       if(ok) renderDetail(sess.id);
     };
   }
@@ -627,22 +960,43 @@ name과 affiliation 어디에도 넣지 말고 버리세요. 특히 "차수"라�
 
   function renderDraftRows(){
     const wrap = document.getElementById('draft-list');
-    wrap.innerHTML = draftStudents.map((s,i)=>`
-      <div class="student-row" data-i="${i}">
-        <input type="text" class="dn" value="${esc(s.name)}" placeholder="이름">
-        <input type="text" class="da" value="${esc(s.affiliation)}" placeholder="대리점명">
-        <input type="text" class="dt" value="${esc(s.durationMin)}" placeholder="분" style="max-width:48px;flex:none;">
-        <button class="rm-btn" data-rm="${i}">✕</button>
-      </div>
-    `).join('');
+
+    draftStudents = mergeStudents([], draftStudents || []);
+
+    wrap.innerHTML = draftStudents.map((raw,i)=>{
+      const s = normalizeStudentRecord(raw);
+      draftStudents[i] = s;
+      return `
+        <div class="student-row triplet" data-i="${i}">
+          <div class="mini-field">
+            <span class="mini-label">소속</span>
+            <input type="text" class="da" value="${esc(s.affiliation)}" placeholder="예: 레이스대리점">
+          </div>
+          <div class="mini-field">
+            <span class="mini-label">매장명</span>
+            <input type="text" class="ds" value="${esc(s.storeName)}" placeholder="예: 율하점">
+          </div>
+          <div class="mini-field student-name-field">
+            <span class="mini-label">이름</span>
+            <input type="text" class="dn" value="${esc(s.name)}" placeholder="예: 김세현">
+          </div>
+          <button class="rm-btn" data-rm="${i}" title="삭제">✕</button>
+        </div>
+      `;
+    }).join('');
+
     wrap.querySelectorAll('.student-row').forEach(row=>{
       const i = +row.dataset.i;
-      row.querySelector('.dn').oninput = e=> draftStudents[i].name = e.target.value;
       row.querySelector('.da').oninput = e=> draftStudents[i].affiliation = e.target.value;
-      row.querySelector('.dt').oninput = e=> draftStudents[i].durationMin = e.target.value;
+      row.querySelector('.ds').oninput = e=> draftStudents[i].storeName = e.target.value;
+      row.querySelector('.dn').oninput = e=> draftStudents[i].name = e.target.value;
     });
+
     wrap.querySelectorAll('[data-rm]').forEach(btn=>{
-      btn.onclick = ()=>{ draftStudents.splice(+btn.dataset.rm,1); renderDraftRows(); };
+      btn.onclick = ()=>{
+        draftStudents.splice(+btn.dataset.rm,1);
+        renderDraftRows();
+      };
     });
   }
 
@@ -746,10 +1100,12 @@ name과 affiliation 어디에도 넣지 말고 버리세요. 특히 "차수"라�
       <div class="score-card ${filled?'filled':''}" data-i="${i}">
         <div class="sc-head">
           <div style="flex:1;min-width:0;">
-            <div class="sc-name">${esc(st.name)}</div>
-            <input type="text" class="sc-affil" value="${esc(st.affiliation)}" placeholder="대리점명 (예: 다울 본점)">
+            <div class="row" style="gap:6px;">
+              <input type="text" class="sc-affil" value="${esc(st.affiliation||'')}" placeholder="소속">
+              <input type="text" class="sc-store" value="${esc(st.storeName||'')}" placeholder="매장명">
+            </div>
+            <input type="text" class="sc-name-input" value="${esc(st.name||'')}" placeholder="이름" style="margin-top:6px;font-weight:800;">
           </div>
-          <div class="sc-time">${esc(st.durationMin)?esc(st.durationMin)+'분 참여':''}</div>
         </div>
         <div class="chip-row">
           ${REASON_PRESETS.map(p=>`<span class="chip ${st.score==p.score?'active':''}" data-preset="${p.score}">${p.label}</span>`).join('')}
@@ -778,6 +1134,8 @@ name과 affiliation 어디에도 넣지 말고 버리세요. 특히 "차수"라�
       };
       card.querySelector('.sc-reason').oninput = e=>{ s.students[i].reason = e.target.value; };
       card.querySelector('.sc-affil').oninput = e=>{ s.students[i].affiliation = e.target.value; };
+      card.querySelector('.sc-store').oninput = e=>{ s.students[i].storeName = e.target.value; };
+      card.querySelector('.sc-name-input').oninput = e=>{ s.students[i].name = e.target.value; };
     });
   }
 
@@ -785,18 +1143,77 @@ name과 affiliation 어디에도 넣지 말고 버리세요. 특히 "차수"라�
   function exportXlsx(){
     const s = currentSession;
     const fileBase = buildFileBase(s);
+
+    const rows = s.students.map(raw=>{
+      const st = normalizeStudentRecord(raw);
+      return `
+      <tr>
+        <td>${esc(st.affiliation||'')}</td>
+        <td>${esc(st.storeName||'')}</td>
+        <td>${esc(st.name||'')}</td>
+        <td>${st.score===null||st.score===undefined?'':esc(st.score)}</td>
+        <td>${esc(st.reason||'')}</td>
+      </tr>`;
+    }).join('');
+
+    const excelHtml = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+table{border-collapse:collapse;font-family:"Malgun Gothic",sans-serif;font-size:11pt}
+th,td{border:1px solid #999;padding:6px 8px;vertical-align:top}
+th{font-weight:bold;background:#e9ecff}
+.title{font-size:15pt;font-weight:bold}
+.meta{font-size:10pt}
+</style>
+</head>
+<body>
+<div class="title">${esc(s.title||fileBase)}</div>
+<div class="meta">${esc(s.date||'')}${s.instructor?' · 담당 강사: '+esc(s.instructor):''}</div>
+<br>
+<table>
+<thead><tr>
+<th>소속</th><th>매장명</th><th>이름</th><th>점수</th><th>사유</th>
+</tr></thead>
+<tbody>${rows}</tbody>
+</table>
+</body>
+</html>`;
+
+    const blob = new Blob(['\uFEFF', excelHtml], {type:'application/vnd.ms-excel;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${fileBase}.xls`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 1500);
+    toast('Excel 파일이 저장되었습니다');
+  }
+
+  function csvEscape(v){
+    const s = (v===undefined||v===null?'':String(v));
+    return '"'+s.replace(/"/g,'""')+'"';
+  }
+  function exportCsvFallback(){
+    const s = currentSession;
+    const fileBase = buildFileBase(s);
     const rows = [
-      [fileBase],
-      [`${s.date || ''}${s.instructor? '  ·  담당 강사: '+s.instructor : ''}`],
-      [],
-      ['이름','대리점명','참가시간','나간시간','참여시간(분)','점수','사유'],
-      ...s.students.map(st=>[st.name, st.affiliation, st.joinTime, st.leaveTime, st.durationMin, st.score, st.reason])
+      ['소속','매장명','이름','점수','사유'],
+      ...s.students.map(raw=>{
+        const st = normalizeStudentRecord(raw);
+        return [st.affiliation, st.storeName, st.name, st.score, st.reason];
+      })
     ];
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet(rows);
-    ws['!cols'] = [{wch:14},{wch:16},{wch:14},{wch:14},{wch:12},{wch:8},{wch:36}];
-    XLSX.utils.book_append_sheet(wb, ws, '출석및태도');
-    XLSX.writeFile(wb, `${fileBase}.xlsx`);
+    const csv = '\uFEFF' + rows.map(r=>r.map(csvEscape).join(',')).join('\r\n');
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href=url; a.download=`${fileBase}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 1500);
   }
 
   // ---------- export: image (drawn directly on canvas, no external lib) ----------
@@ -830,79 +1247,89 @@ name과 affiliation 어디에도 넣지 말고 버리세요. 특히 "차수"라�
   function exportImage(){
     const s = currentSession;
     const fileBase = buildFileBase(s);
-    const SCALE = 2; // retina-ish output
-    const W = 700;
+    const SCALE = 2;
+    const W = 760;
     const PAD = 26;
-    const colName = 84, colAffil = 84, colDur = 58, colScore = 44;
-    const colReason = W - PAD*2 - colName - colAffil - colDur - colScore;
+    const colAffil = 120, colStore = 120, colName = 90, colScore = 50;
+    const colReason = W - PAD*2 - colAffil - colStore - colName - colScore;
     const lineH = 16;
     const rowPadV = 10;
-    const headerH = 92;   // title + date block
+    const headerH = 92;
     const tableHeadH = 32;
 
-    // measure with a scratch canvas first
     const meas = document.createElement('canvas').getContext('2d');
     meas.font = '12px -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
-    const rows = s.students.map(st=>{
+
+    const rows = s.students.map(raw=>{
+      const st = normalizeStudentRecord(raw);
       const scoreTxt = (st.score!==null && st.score!==undefined && st.score!=='') ? String(st.score) : '-';
-      const durTxt = st.durationMin!==undefined && st.durationMin!==null && st.durationMin!=='' ? `${st.durationMin}분` : '-';
       const reasonLines = wrapText(meas, st.reason || '-', colReason - 12);
       const rowH = Math.max(lineH*2 + rowPadV, reasonLines.length*lineH + rowPadV);
-      return {name: st.name||'', affiliation: st.affiliation||'-', durTxt, scoreTxt, reasonLines, rowH};
+      return {
+        affiliation:st.affiliation||'-',
+        storeName:st.storeName||'-',
+        name:st.name||'',
+        scoreTxt,
+        reasonLines,
+        rowH
+      };
     });
-    const totalH = headerH + tableHeadH + rows.reduce((a,r)=>a+r.rowH,0) + PAD;
 
+    const totalH = headerH + tableHeadH + rows.reduce((a,r)=>a+r.rowH,0) + PAD;
     const canvas = document.createElement('canvas');
     canvas.width = W*SCALE;
     canvas.height = totalH*SCALE;
     const ctx = canvas.getContext('2d');
     ctx.scale(SCALE, SCALE);
 
-    // background
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0,0,W,totalH);
 
-    // header
     ctx.fillStyle = '#1E1B4B';
     ctx.font = '800 19px -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
     ctx.fillText(fileBase, PAD, 36);
     ctx.fillStyle = '#6B7280';
     ctx.font = '600 12px -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
     ctx.fillText(`${s.date || ''} · 교육생 ${s.students.length}명`, PAD, 56);
-    ctx.strokeStyle = '#E7E9F5';
-    ctx.beginPath(); ctx.moveTo(PAD, 70); ctx.lineTo(W-PAD, 70); ctx.stroke();
 
-    // table header
+    ctx.strokeStyle = '#E7E9F5';
+    ctx.beginPath(); ctx.moveTo(PAD,70); ctx.lineTo(W-PAD,70); ctx.stroke();
+
     let y = headerH;
     ctx.fillStyle = '#4F46E5';
-    ctx.fillRect(PAD, y, W-PAD*2, tableHeadH);
+    ctx.fillRect(PAD,y,W-PAD*2,tableHeadH);
     ctx.fillStyle = '#FFFFFF';
     ctx.font = '700 12px -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
-    ctx.fillText('이름', PAD+10, y+20);
-    ctx.fillText('대리점명', PAD+colName+10, y+20);
-    ctx.fillText('참여시간', PAD+colName+colAffil+10, y+20);
-    ctx.fillText('점수', PAD+colName+colAffil+colDur+10, y+20);
-    ctx.fillText('사유', PAD+colName+colAffil+colDur+colScore+10, y+20);
+
+    ctx.fillText('소속', PAD+10, y+20);
+    ctx.fillText('매장명', PAD+colAffil+10, y+20);
+    ctx.fillText('이름', PAD+colAffil+colStore+10, y+20);
+    ctx.fillText('점수', PAD+colAffil+colStore+colName+10, y+20);
+    ctx.fillText('사유', PAD+colAffil+colStore+colName+colScore+10, y+20);
     y += tableHeadH;
 
     rows.forEach((r,i)=>{
       ctx.fillStyle = i%2 ? '#F5F6FF' : '#FFFFFF';
-      ctx.fillRect(PAD, y, W-PAD*2, r.rowH);
-      ctx.fillStyle = '#1F2430';
-      ctx.font = '700 12.5px -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
-      ctx.fillText(r.name, PAD+10, y+18);
-      ctx.font = '500 11.5px -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
-      ctx.fillStyle = '#6B7280';
-      ctx.fillText(r.affiliation, PAD+colName+10, y+18);
-      ctx.fillText(r.durTxt, PAD+colName+colAffil+10, y+18);
-      ctx.fillStyle = '#1F2430';
-      ctx.font = '700 12.5px -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
-      ctx.fillText(r.scoreTxt, PAD+colName+colAffil+colDur+10, y+18);
+      ctx.fillRect(PAD,y,W-PAD*2,r.rowH);
+
       ctx.font = '500 11.5px -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
       ctx.fillStyle = '#374151';
-      r.reasonLines.forEach((ln,li)=> ctx.fillText(ln, PAD+colName+colAffil+colDur+colScore+10, y+18+li*lineH));
+      ctx.fillText(r.affiliation, PAD+10, y+18);
+      ctx.fillText(r.storeName, PAD+colAffil+10, y+18);
+
+      ctx.font = '700 12.5px -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
+      ctx.fillStyle = '#1F2430';
+      ctx.fillText(r.name, PAD+colAffil+colStore+10, y+18);
+      ctx.fillText(r.scoreTxt, PAD+colAffil+colStore+colName+10, y+18);
+
+      ctx.font = '500 11.5px -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
+      ctx.fillStyle = '#374151';
+      r.reasonLines.forEach((ln,li)=>
+        ctx.fillText(ln, PAD+colAffil+colStore+colName+colScore+10, y+18+li*lineH)
+      );
+
       ctx.strokeStyle = '#E7E9F5';
-      ctx.beginPath(); ctx.moveTo(PAD, y+r.rowH); ctx.lineTo(W-PAD, y+r.rowH); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(PAD,y+r.rowH); ctx.lineTo(W-PAD,y+r.rowH); ctx.stroke();
       y += r.rowH;
     });
 
