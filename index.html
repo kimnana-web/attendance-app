@@ -173,7 +173,7 @@
 </style>
 </head>
 <body>
-<div style="position:fixed;right:10px;bottom:10px;z-index:99999;background:#111827;color:#fff;padding:7px 10px;border-radius:999px;font:700 11px/1.2 -apple-system,BlinkMacSystemFont,'Malgun Gothic',sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.18);">V10.2 · Claude Vision · API 경로 단순화</div>
+<div style="position:fixed;right:10px;bottom:10px;z-index:99999;background:#111827;color:#fff;padding:7px 10px;border-radius:999px;font:700 11px/1.2 -apple-system,BlinkMacSystemFont,'Malgun Gothic',sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.18);">V10.3 · 공유링크 API 404 수정</div>
 
 <div id="app-root">
   <div class="shell" id="shell"></div>
@@ -182,6 +182,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <script>
+console.log('attendance-app V10.3 - propagating _vercel_share to API requests');
 (function(){
   try{ document.title = '천하무적동부교육팀 교육생 만족도 체크'; }catch(e){}
   const shell = document.getElementById('shell');
@@ -353,8 +354,23 @@
   }
 
   // ---------- OCR via Claude vision ----------
+  function vercelApiUrl(path){
+    const url = new URL(path, window.location.origin);
+
+    // Vercel Shareable Link는 _vercel_share 쿼리로 보호된 배포에 접근합니다.
+    // 현재 페이지에 있는 공유 토큰을 API 요청에도 그대로 전달합니다.
+    const params = new URLSearchParams(window.location.search);
+    const shareToken = params.get('_vercel_share');
+
+    if(shareToken){
+      url.searchParams.set('_vercel_share', shareToken);
+    }
+
+    return url.pathname + url.search;
+  }
+
   async function extractFromImage(base64, mediaType){
-    const resp = await fetch('/api/extract', {
+    const resp = await fetch(vercelApiUrl('/api/extract'), {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({base64, mediaType})
@@ -364,7 +380,7 @@
     try{
       data = await resp.json();
     }catch(e){
-      throw new Error(`사진 인식 서버 응답을 읽지 못했습니다. 상태 코드 ${resp.status}`);
+      throw new Error(`사진 인식 서버 응답을 읽지 못했습니다. 상태 코드 ${resp.status}. 공유 링크 보호 토큰과 API 경로를 확인해주세요.`);
     }
 
     if(!resp.ok){
