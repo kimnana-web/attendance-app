@@ -1,0 +1,1888 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#4F46E5">
+<title>천하무적동부교육팀 교육생 만족도 체크</title>
+<style>
+  :root{
+    --navy:#4F46E5;
+    --navy-deep:#1E1B4B;
+    --amber:#F59E0B;
+    --teal:#10B981;
+    --red:#EF4444;
+    --paper:#F3F4FD;
+    --card:#FFFFFF;
+    --ink:#1F2430;
+    --sub:#6B7280;
+    --line:#E7E9F5;
+    --shadow: 0 1px 2px rgba(30,27,75,.04), 0 8px 24px rgba(79,70,229,.07);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;min-height:100%;background:#F3F4FD;}
+  body{min-height:100vh;}
+  #app-root{
+    font-family:-apple-system,BlinkMacSystemFont,'Malgun Gothic','Apple SD Gothic Neo','Segoe UI',sans-serif;
+    background:radial-gradient(circle at 12% 0%, #EEF0FF 0%, var(--paper) 42%);
+    color:var(--ink);
+    min-height:100%;
+    padding:0;
+    line-height:1.5;
+    letter-spacing:-0.01em;
+  }
+  .shell{max-width:520px;margin:0 auto;padding:18px 16px 60px;}
+  .topbar{
+    display:flex;align-items:flex-start;justify-content:space-between;
+    padding:14px 4px 18px;
+  }
+  .brand{display:flex;align-items:flex-start;gap:10px;}
+  .brand-mark{
+    width:34px;height:34px;border-radius:11px;
+    background:linear-gradient(135deg,#6366F1,#4F46E5 55%,#4338CA);
+    box-shadow:0 4px 14px rgba(79,70,229,.35);
+    display:flex;align-items:center;justify-content:center;
+    color:#fff;font-weight:800;font-size:16px;flex-shrink:0;
+  }
+  .brand-title{font-size:15px;font-weight:800;color:var(--navy-deep);line-height:1.3;}
+  .brand-sub{font-size:11px;color:var(--sub);margin-top:3px;}
+  .back-btn{
+    background:none;border:none;color:var(--navy);font-size:13px;font-weight:600;
+    cursor:pointer;padding:6px 4px;display:flex;align-items:center;gap:4px;
+  }
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:18px;
+    padding:18px;margin-bottom:14px;box-shadow:var(--shadow);
+  }
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    border:none;border-radius:13px;padding:13px 18px;font-size:14px;font-weight:700;
+    cursor:pointer;width:100%;transition:opacity .15s ease, transform .1s ease;
+  }
+  .btn:active{opacity:.8;transform:scale(.99);}
+  .btn-primary{background:linear-gradient(135deg,#6366F1,#4F46E5);color:#fff;box-shadow:0 6px 16px rgba(79,70,229,.3);}
+  .btn-amber{background:linear-gradient(135deg,#FBBF24,#F59E0B);color:#3F2D02;box-shadow:0 6px 16px rgba(245,158,11,.28);}
+  .btn-teal{background:var(--teal);color:#fff;}
+  .btn-outline{background:#fff;color:var(--navy);border:1.5px solid var(--line);}
+  .btn-ghost{background:transparent;color:var(--sub);font-weight:600;}
+  .btn-danger-ghost{background:transparent;color:var(--red);font-weight:600;font-size:12px;padding:4px 8px;width:auto;}
+  .btn-sm{padding:8px 12px;font-size:12.5px;width:auto;}
+  .row{display:flex;gap:8px;}
+  .row > *{flex:1;}
+  .empty{
+    text-align:center;padding:48px 12px;color:var(--sub);
+  }
+  .empty-num{font-size:34px;font-weight:800;color:var(--line);margin-bottom:6px;}
+  .session-item{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 4px;border-bottom:1px solid var(--line);cursor:pointer;
+    border-radius:10px;
+  }
+  .session-item:active{background:#F5F6FF;}
+  .session-item:last-child{border-bottom:none;}
+  .session-idx{
+    font-size:11px;font-weight:800;color:var(--amber);width:22px;flex-shrink:0;
+  }
+  .session-main{flex:1;min-width:0;}
+  .session-title{font-size:14px;font-weight:700;color:var(--navy-deep);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .session-meta{font-size:11.5px;color:var(--sub);margin-top:2px;}
+  .badge{
+    font-size:10.5px;font-weight:800;padding:4px 8px;border-radius:20px;flex-shrink:0;
+  }
+  .badge-done{background:#DCFCE7;color:#15803D;}
+  .badge-pending{background:#FEF3C7;color:#B45309;}
+  label.field-label{
+    display:block;font-size:12px;font-weight:700;color:var(--sub);
+    margin-bottom:6px;margin-top:14px;
+  }
+  label.field-label:first-child{margin-top:0;}
+  input[type=text], input[type=number], textarea{
+    width:100%;border:1.5px solid var(--line);border-radius:11px;
+    padding:10px 11px;font-size:14px;font-family:inherit;color:var(--ink);
+    background:#FAFAFF;
+  }
+  input:focus, textarea:focus{outline:none;border-color:var(--navy);background:#fff;}
+  textarea{resize:vertical;min-height:56px;}
+  .upload-zone{
+    border:2px dashed #C7D2FE;border-radius:16px;padding:34px 16px;
+    text-align:center;cursor:pointer;background:#F8F9FF;
+  }
+  .upload-zone:active{background:#EEF0FF;}
+  .upload-icon{font-size:30px;margin-bottom:8px;}
+  .upload-txt{font-size:13.5px;font-weight:700;color:var(--navy);}
+  .upload-sub{font-size:11.5px;color:var(--sub);margin-top:3px;}
+  .preview-img{width:100%;border-radius:12px;border:1px solid var(--line);margin-bottom:12px;}
+  .student-row{
+    border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;
+    display:flex;gap:8px;align-items:center;background:#FAFAFF;
+  }
+  .student-row input{flex:1;}
+  .student-row.triplet{
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr 105px 34px;
+    gap:7px;
+    align-items:end;
+    padding:11px;
+  }
+  .mini-field{min-width:0;}
+  .mini-label{
+    display:block;
+    font-size:10.5px;
+    font-weight:800;
+    color:var(--sub);
+    margin:0 0 4px 2px;
+  }
+  .student-row.triplet input{
+    width:100%;
+    min-width:0;
+    padding:9px 8px;
+    font-size:13px;
+  }
+  .student-head-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr 105px 34px;
+    gap:7px;
+    padding:0 11px 6px;
+    color:var(--sub);
+    font-size:10.5px;
+    font-weight:800;
+  }
+  @media(max-width:470px){
+    .student-row.triplet{
+      grid-template-columns:1fr 1fr 34px;
+    }
+    .student-row.triplet .student-name-field{
+      grid-column:1 / 3;
+    }
+    .student-row.triplet .student-duration-field{
+      grid-column:1 / 3;
+    }
+    .student-head-grid{display:none;}
+  }
+  .rm-btn{
+    width:28px;height:28px;border-radius:9px;border:none;background:#FEE2E2;
+    color:var(--red);font-weight:800;cursor:pointer;flex-shrink:0;
+  }
+  .stat-strip{display:flex;gap:8px;margin-bottom:14px;}
+  .stat-box{
+    flex:1;background:#F8F9FF;border:1px solid var(--line);border-radius:13px;
+    padding:10px;text-align:center;
+  }
+  .stat-num{font-size:19px;font-weight:800;color:var(--navy-deep);}
+  .stat-lbl{font-size:10.5px;color:var(--sub);margin-top:2px;}
+  .score-card{
+    border:1px solid var(--line);border-radius:16px;padding:13px;margin-bottom:10px;background:#fff;
+    box-shadow:0 1px 2px rgba(30,27,75,.03);
+  }
+  .score-card.filled{border-color:#A7F3D0;background:#F5FEFA;}
+  .sc-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px;}
+  .sc-name{font-size:14.5px;font-weight:800;color:var(--navy-deep);}
+  .sc-affil{
+    margin-top:3px;width:100%;border:none;border-bottom:1px dashed var(--line);
+    padding:2px 0;font-size:11.5px;color:var(--sub);background:transparent;border-radius:0;
+  }
+  .sc-affil:focus{outline:none;border-bottom-color:var(--navy);}
+  .sc-time{font-size:11px;color:var(--sub);white-space:nowrap;flex-shrink:0;padding-top:2px;}
+  .chip-row{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;}
+  .chip{
+    font-size:11.5px;font-weight:700;padding:6px 10px;border-radius:20px;
+    border:1.5px solid var(--line);background:#fff;cursor:pointer;color:var(--ink);
+  }
+  .chip.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+  .score-input-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+  .score-input-row input{width:70px;flex:none;text-align:center;font-weight:800;}
+  .score-input-row span{font-size:12px;color:var(--sub);font-weight:600;}
+  .toast{
+    position:fixed;left:50%;bottom:24px;transform:translateX(-50%);
+    background:var(--navy-deep);color:#fff;padding:11px 20px;border-radius:30px;
+    font-size:13px;font-weight:700;z-index:999;box-shadow:0 10px 24px rgba(30,27,75,.35);
+  }
+  .spin{
+    width:18px;height:18px;border-radius:50%;border:2.5px solid rgba(255,255,255,.35);
+    border-top-color:#fff;animation:spin .7s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .loading-wrap{display:flex;align-items:center;justify-content:center;gap:10px;padding:26px 0;color:var(--sub);font-size:13px;font-weight:600;}
+  .hint{font-size:12px;color:var(--sub);margin-top:8px;line-height:1.55;}
+  .fab-export{
+    position:sticky;bottom:0;background:linear-gradient(0deg,var(--paper) 60%,transparent);
+    padding:14px 0 4px;margin-top:6px;
+  }
+</style>
+</head>
+<body>
+<div style="position:fixed;right:10px;bottom:10px;z-index:99999;background:#111827;color:#fff;padding:7px 10px;border-radius:999px;font:700 11px/1.2 -apple-system,BlinkMacSystemFont,'Malgun Gothic',sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.18);">V7 · 표 셀 정밀인식 · 현황영역 제외</div>
+
+<div id="app-root">
+  <div class="shell" id="shell"></div>
+</div>
+
+<!-- 서버 API 없이 브라우저 안에서 OCR 실행 -->
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+<script>
+console.log('attendance-app V7 - table-cell OCR + status-area exclusion');
+(function(){
+  try{ document.title = '천하무적동부교육팀 교육생 만족도 체크'; }catch(e){}
+  const shell = document.getElementById('shell');
+  let view = 'list';
+  let currentSession = null;   // full session object in memory while editing
+  let draftStudents = null;    // editable extraction result before first save
+
+  const REASON_PRESETS = [
+    {score:100, label:'적극 참여', reason:'적극 참여, 높은 몰입도, 활발한 소통'},
+    {score:90,  label:'성실 참여', reason:'성실히 참여, 원활한 소통'},
+    {score:80,  label:'다소 제한적', reason:'참여했으나 의견공유, 상호작용이 다소 제한적'},
+    {score:70,  label:'참여 저조', reason:'참여 저조, 집중도 낮음'},
+    {score:60,  label:'참여 미흡', reason:'참여 거의 없음, 카메라/음성 응답 미확인'},
+  ];
+
+  // ---------- storage helpers ----------
+  // 공개 웹 배포 버전: 기록은 각 사용자의 브라우저 localStorage에 저장됩니다.
+  // 따라서 같은 URL을 사용해도 기기/브라우저별 기록은 서로 섞이지 않습니다.
+  async function kvGet(key){
+    try{ return window.localStorage.getItem(key); }catch(e){ return null; }
+  }
+  async function kvSet(key, value){
+    try{ window.localStorage.setItem(key, value); return true; }
+    catch(e){ console.error('kvSet fail', e); return false; }
+  }
+  async function kvDelete(key){
+    try{ window.localStorage.removeItem(key); }catch(e){}
+  }
+
+  async function getIndex(){
+    try{
+      const v = await kvGet('session-index');
+      return v ? JSON.parse(v) : [];
+    }catch(e){ return []; }
+  }
+  async function saveIndex(idx){
+    try{ await kvSet('session-index', JSON.stringify(idx)); }
+    catch(e){ console.error('index save fail', e); }
+  }
+  async function getSession(id){
+    try{
+      const v = await kvGet('session:'+id);
+      if(!v) return null;
+      const s = JSON.parse(v);
+      s.students = (s.students||[]).map(normalizeStudentRecord);
+      return s;
+    }catch(e){ return null; }
+  }
+  async function saveSession(sess){
+    try{
+      const ok = await kvSet('session:'+sess.id, JSON.stringify(sess));
+      if(!ok) return false;
+      let idx = await getIndex();
+      const scoredCount = sess.students.filter(s=>s.score!==null && s.score!==undefined && s.score!=='').length;
+      const entry = {
+        id:sess.id, title:sess.title, date:sess.date,
+        count:sess.students.length, scoredCount,
+        done: scoredCount===sess.students.length && sess.students.length>0
+      };
+      idx = idx.filter(e=>e.id!==sess.id);
+      idx.unshift(entry);
+      await saveIndex(idx);
+      return true;
+    }catch(e){ console.error('save fail', e); return false; }
+  }
+  async function deleteSession(id){
+    try{
+      await kvDelete('session:'+id);
+      let idx = await getIndex();
+      idx = idx.filter(e=>e.id!==id);
+      await saveIndex(idx);
+    }catch(e){ console.error('delete fail', e); }
+  }
+
+
+  function canonical(v){
+    return String(v||'')
+      .toLowerCase()
+      .replace(/\s+/g,'')
+      .replace(/[()[\]{}_\-.,:;/'"\\]/g,'')
+      .trim();
+  }
+
+  function canonicalName(v){
+    return String(v||'').replace(/[^가-힣A-Za-z]/g,'').toLowerCase();
+  }
+
+  function canonicalDate(v){
+    return String(v||'').replace(/[^\d]/g,'');
+  }
+
+  function sessionKey(courseName, session, date){
+    return [canonical(courseName), canonical(session), canonicalDate(date)].join('|');
+  }
+
+  // 기존 구버전의 "소속" 한 칸에 "대리점 + 매장명"이 함께 들어 있던 데이터를
+  // 새 구조(소속/매장명)로 최대한 안전하게 분리한다.
+  function extractMarketingRegion(raw){
+    raw = String(raw || '')
+      .replace(/[|•●■□◆◇▶►※]/g,' ')
+      .replace(/\s+/g,' ')
+      .trim();
+
+    if(!raw) return '';
+
+    const compact = raw.replace(/\s+/g,'');
+
+    // 화면 예:
+    // 대구마케팅담당 > 동대구마케팅팀 > 상상대리점
+    // 첫 번째 조직(대구마케팅담당)이 아니라
+    // 마케팅 "팀" 조직의 지역명(동대구)만 사용한다.
+    const teamMatches = [...compact.matchAll(/([가-힣]{2,10})마케팅팀/g)]
+      .map(m => (m[1] || '').trim())
+      .filter(Boolean);
+
+    if(teamMatches.length){
+      // 두 개 이상이면 두 번째 값, 그 외에는 마지막 팀 값을 사용
+      return teamMatches.length >= 2 ? teamMatches[1] : teamMatches[teamMatches.length-1];
+    }
+
+    // OCR에서 '팀' 한 글자를 놓친 경우를 위한 보조 규칙.
+    // '마케팅담당' 값은 소속으로 사용하지 않고, 두 번째 마케팅 조직을 우선한다.
+    const marketingMatches = [...compact.matchAll(/([가-힣]{2,10})마케팅(?:팀|담당)?/g)]
+      .map(m => (m[1] || '').trim())
+      .filter(Boolean);
+
+    if(marketingMatches.length >= 2) return marketingMatches[1];
+
+    return '';
+  }
+
+  function splitAffiliationStore(raw){
+    raw = String(raw||'')
+      .replace(/[|•●■□◆◇▶►※]/g,' ')
+      .replace(/\s+/g,' ')
+      .trim();
+
+    if(!raw) return {affiliation:'', storeName:''};
+
+    // 소속은 '○○마케팅팀'에서 지역명만 가져온다.
+    // 한 줄에 마케팅팀 값이 2개라면 두 번째 값을 우선 사용한다.
+    const marketingRegion = extractMarketingRegion(raw);
+
+    // 매장명 판별용으로 '○○마케팅팀' 문자열은 제거
+    let storeSource = raw.replace(/[가-힣]{2,10}\s*마케팅팀/g,' ').replace(/\s+/g,' ').trim();
+
+    // "레이스대리점율하점"처럼 붙어서 인식된 경우
+    const dealerAttached = storeSource.match(/^(.+?대리점)\s*(.+)$/);
+    if(dealerAttached){
+      const rest = dealerAttached[2].trim();
+      if(rest && /(점|본점|지점|센터|매장|스토어|플라자)$/.test(rest)){
+        return {
+          affiliation: marketingRegion,
+          storeName: rest
+        };
+      }
+    }
+
+    const tokens = storeSource.split(' ').filter(Boolean);
+    const last = tokens[tokens.length-1] || '';
+    const storePattern = /(점|본점|지점|직영점|센터|매장|스토어|플라자)$/;
+
+    if(tokens.length >= 2 && storePattern.test(last)){
+      return {
+        affiliation: marketingRegion,
+        storeName: last.trim()
+      };
+    }
+
+    if(tokens.length === 1 && storePattern.test(storeSource)){
+      return {
+        affiliation: marketingRegion,
+        storeName: storeSource
+      };
+    }
+
+    // 매장명이 애매하더라도 소속 지역은 마케팅팀 값에서 정확히 분리
+    return {
+      affiliation: marketingRegion,
+      storeName: storeSource
+    };
+  }
+
+  function normalizeStudentRecord(st){
+    st = st || {};
+    const rawAffiliation = String(st.organization || st.affiliationOrg || st.affiliation || '').trim();
+    const rawStore = String(st.storeName || '').trim();
+
+    const combinedForParsing = [rawAffiliation, rawStore].filter(Boolean).join(' ');
+    const split = splitAffiliationStore(combinedForParsing);
+
+    // 기존에 '동대구마케팅팀'처럼 저장된 값도 '동대구'로 정리
+    const directRegion = extractMarketingRegion(rawAffiliation);
+
+    return {
+      id: st.id || uid(),
+      affiliation: String(directRegion || split.affiliation || '').trim(),
+      storeName: String(rawStore || split.storeName || '').trim(),
+      name: String(st.name || '').trim(),
+      score: st.score===undefined ? null : st.score,
+      reason: st.reason || '',
+      joinTime: st.joinTime || '',
+      leaveTime: st.leaveTime || '',
+      durationMin: st.durationMin || '',
+      ocrConfidence: st.ocrConfidence===undefined ? null : st.ocrConfidence
+    };
+  }
+
+  function mergeStudents(baseStudents, newStudents){
+    const byName = new Map();
+
+    const put = (raw, preferExisting)=>{
+      const st = normalizeStudentRecord(raw);
+      const key = canonicalName(st.name);
+      if(!key) return;
+
+      if(!byName.has(key)){
+        byName.set(key, st);
+        return;
+      }
+
+      const old = byName.get(key);
+      const merged = {
+        ...old,
+        // 기존 강사 수정값/평가값을 우선 보존
+        affiliation: old.affiliation || st.affiliation,
+        storeName: old.storeName || st.storeName,
+        name: old.name || st.name,
+        score: (old.score!==null && old.score!==undefined && old.score!=='') ? old.score : st.score,
+        reason: old.reason || st.reason,
+        joinTime: old.joinTime || st.joinTime,
+        leaveTime: old.leaveTime || st.leaveTime,
+        durationMin: old.durationMin || st.durationMin
+      };
+      byName.set(key, merged);
+    };
+
+    (baseStudents||[]).forEach(s=>put(s,true));
+    (newStudents||[]).forEach(s=>put(s,false));
+    return Array.from(byName.values());
+  }
+
+  async function findExistingSession(courseName, session, date){
+    const target = sessionKey(courseName, session, date);
+    const idx = await getIndex();
+    for(const e of idx){
+      const s = await getSession(e.id);
+      if(!s) continue;
+      if(sessionKey(s.courseName || '', s.session || '', s.date || '') === target){
+        return s;
+      }
+    }
+    return null;
+  }
+
+  // 이전 버전에서 같은 과정/차수/날짜가 여러 번 저장된 경우 자동으로 한 건으로 합친다.
+  async function consolidateDuplicateSessions(){
+    const idx = await getIndex();
+    if(idx.length < 2) return;
+
+    const groups = new Map();
+    let changed = false;
+
+    for(const entry of idx){
+      const s = await getSession(entry.id);
+      if(!s) continue;
+
+      s.students = mergeStudents([], s.students || []);
+      const key = sessionKey(s.courseName || '', s.session || '', s.date || '');
+
+      if(!groups.has(key)){
+        groups.set(key, s);
+      }else{
+        const keep = groups.get(key);
+        keep.students = mergeStudents(keep.students, s.students);
+        keep.instructor = keep.instructor || s.instructor || '';
+        await kvDelete('session:'+s.id);
+        changed = true;
+      }
+    }
+
+    if(!changed) return;
+
+    const newIdx = [];
+    for(const s of groups.values()){
+      await kvSet('session:'+s.id, JSON.stringify(s));
+      const scoredCount = s.students.filter(st=>st.score!==null && st.score!==undefined && st.score!=='').length;
+      newIdx.push({
+        id:s.id,
+        title:s.title,
+        date:s.date,
+        count:s.students.length,
+        scoredCount,
+        done:scoredCount===s.students.length && s.students.length>0
+      });
+    }
+    await saveIndex(newIdx);
+  }
+
+
+  function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+  function toast(msg){
+    const t=document.createElement('div');
+    t.className='toast'; t.textContent=msg;
+    document.body.appendChild(t);
+    setTimeout(()=>t.remove(), 2200);
+  }
+  function esc(s){
+    return (s===undefined||s===null?'':String(s)).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // ---------- 브라우저 OCR ----------
+  // 서버 API / API Key / Vercel Function을 사용하지 않습니다.
+  // 이미지 문자인식은 사용자의 브라우저에서 Tesseract.js로 실행됩니다.
+
+  const OCR_STOPWORDS = new Set([
+    '참가자','참가자목록','참가','목록','이름','회의','회의정보','대기실','호스트',
+    '교육강사','강사','나','초대','모두음소거','음소거','비디오','오디오',
+    '채팅','반응','화면공유','보안','기록','종료','나가기','검색','더보기',
+    'zoom','ZOOM','Zoom','SIA','sia'
+  ]);
+
+  function cleanOcrLine(line){
+    return String(line || '')
+      .replace(/[|•●■□◆◇▶►※]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function normalizeKoreanName(raw){
+    let s = String(raw || '').trim();
+    s = s.replace(/의\s*(iPad|iPhone|Galaxy|Android|Phone|PC|Mac).*$/i, '');
+    s = s.replace(/[^\uAC00-\uD7A3]/g, '');
+    return /^[가-힣]{2,4}$/.test(s) ? s : '';
+  }
+
+  function looksLikeUiLine(line){
+    const compact = line.replace(/\s/g,'');
+    if(!compact) return true;
+    if(/^\d{1,2}[:.]\d{2}/.test(line)) return true;
+    if(/^\d+%?$/.test(compact)) return true;
+    for(const w of OCR_STOPWORDS){
+      if(compact === String(w).replace(/\s/g,'')) return true;
+    }
+    if(/참가자|대기실|모두\s*음소거|화면\s*공유|회의\s*종료|오디오|비디오/i.test(line)) return true;
+    return false;
+  }
+
+  function extractCourseMeta(text){
+    const lines = String(text || '')
+      .split(/\r?\n/)
+      .map(cleanOcrLine)
+      .filter(Boolean);
+
+    let courseName = '';
+    let session = '';
+    let schedule = '';
+    let instructor = '';
+
+    for(const line of lines){
+      if(!session){
+        const m = line.match(/(\d{1,3})\s*차수/);
+        if(m) session = m[1];
+      }
+
+      if(!schedule){
+        const d = line.match(/(20\d{2}[.\-/]\s*\d{1,2}[.\-/]\s*\d{1,2}|\d{1,2}[.\-/]\s*\d{1,2}[.\-/]\s*20\d{2})/);
+        if(d) schedule = d[1].replace(/\s/g,'');
+      }
+
+      if(!instructor){
+        let m = line.match(/(?:담당\s*)?강사(?:명)?\s*[:：\-]?\s*([가-힣]{2,4})/);
+        if(!m) m = line.match(/([가-힣]{2,4})\s*강사(?:님)?/);
+        if(m && !/교육|담당|진행|회의/.test(m[1])) instructor = m[1];
+      }
+    }
+
+    // 과정명은 참가자/교육생 줄을 절대 사용하지 않고,
+    // "과정/교육/BOOST/NPS/Btv/max" 등 과정명 성격이 있는 줄에서만 선택
+    const candidates = lines.filter(line =>
+      /교육|과정|BOOST|NPS|Btv|max|인증/i.test(line) &&
+      !/참가자|교육생|학습자|대기실|호스트|담당\s*강사/i.test(line) &&
+      !looksLikeUiLine(line)
+    );
+
+    if(candidates.length){
+      courseName = candidates[0]
+        .replace(/\d{1,3}\s*차수.*$/,'')
+        .replace(/20\d{2}[.\-/]\s*\d{1,2}[.\-/]\s*\d{1,2}.*$/,'')
+        .trim();
+    }
+
+    return {courseName, session, schedule, instructor};
+  }
+
+  function parseTsv(tsv){
+    if(!tsv) return [];
+    const lines = String(tsv).split(/\r?\n/);
+    if(lines.length < 2) return [];
+
+    const out = [];
+    for(let i=1;i<lines.length;i++){
+      if(!lines[i]) continue;
+      const cols = lines[i].split('\t');
+      if(cols.length < 12) continue;
+
+      const text = (cols.slice(11).join('\t') || '').trim();
+      if(!text) continue;
+
+      const left = Number(cols[6]) || 0;
+      const top = Number(cols[7]) || 0;
+      const width = Number(cols[8]) || 0;
+      const height = Number(cols[9]) || 0;
+      const conf = Number(cols[10]);
+
+      out.push({
+        text,
+        left,
+        top,
+        width,
+        height,
+        right:left+width,
+        bottom:top+height,
+        cx:left+width/2,
+        cy:top+height/2,
+        conf:Number.isFinite(conf) ? conf : -1
+      });
+    }
+    return out;
+  }
+
+  function compactOcrText(v){
+    return String(v||'')
+      .replace(/\s+/g,'')
+      .replace(/[|•●■□◆◇▶►※:：]/g,'')
+      .trim();
+  }
+
+  function findTableGeometry(words, imageWidth, imageHeight){
+    const findHeader = (label)=>{
+      const exact = words.filter(w => compactOcrText(w.text) === label);
+      if(exact.length) return exact[0];
+
+      // 일부 글자 사이에 띄어쓰기가 생겨도 허용
+      const partial = words.filter(w => compactOcrText(w.text).includes(label));
+      return partial[0] || null;
+    };
+
+    let aff = findHeader('소속명');
+    let store = findHeader('매장명');
+    let name = findHeader('이름');
+
+    // 같은 헤더 행에 있는 단어만 사용하도록 우선 보정
+    const found = [aff,store,name].filter(Boolean);
+    let headerY = found.length
+      ? found.reduce((a,w)=>a+w.cy,0)/found.length
+      : imageHeight * 0.405;
+
+    // OCR이 헤더 중 일부를 놓치면 첨부 화면의 열 비율을 안전한 fallback으로 사용
+    const affCenter = aff ? aff.cx : imageWidth * 0.322;
+    const storeCenter = store ? store.cx : imageWidth * 0.592;
+    const nameCenter = name ? name.cx : imageWidth * 0.862;
+
+    const affLeft = Math.max(0, affCenter - (storeCenter-affCenter)/2);
+    const affRight = (affCenter + storeCenter)/2;
+    const storeRight = (storeCenter + nameCenter)/2;
+    const nameRight = imageWidth;
+
+    const headerBottom = found.length
+      ? Math.max(...found.map(w=>w.bottom)) + Math.max(5, imageHeight*0.004)
+      : imageHeight * 0.425;
+
+    return {
+      headerY,
+      headerBottom,
+      affLeft,
+      affRight,
+      storeLeft:affRight,
+      storeRight,
+      nameLeft:storeRight,
+      nameRight
+    };
+  }
+
+  function clusterRowCenters(words, minY, maxY, minX, maxX, imageHeight){
+    const candidates = words
+      .filter(w =>
+        w.cy > minY &&
+        w.cy < maxY &&
+        w.cx >= minX &&
+        w.cx <= maxX &&
+        /[가-힣]/.test(w.text) &&
+        !/이름|승인|출석|현황|삭제|반려|차수/.test(w.text)
+      )
+      .sort((a,b)=>a.cy-b.cy);
+
+    const tolerance = Math.max(8, imageHeight * 0.012);
+    const groups = [];
+
+    for(const w of candidates){
+      const last = groups[groups.length-1];
+      if(!last || Math.abs(w.cy-last.center) > tolerance){
+        groups.push({items:[w], center:w.cy});
+      }else{
+        last.items.push(w);
+        last.center = last.items.reduce((a,x)=>a+x.cy,0)/last.items.length;
+      }
+    }
+
+    // 한 행의 이름이 OCR에서 2개 토큰으로 나뉜 경우도 한 행으로 합친다.
+    return groups
+      .map(g=>g.center)
+      .filter((v,i,arr)=> i===0 || Math.abs(v-arr[i-1]) > tolerance*0.7);
+  }
+
+  function safeRect(left, top, right, bottom, imageWidth, imageHeight){
+    left = Math.max(0, Math.floor(left));
+    top = Math.max(0, Math.floor(top));
+    right = Math.min(imageWidth, Math.ceil(right));
+    bottom = Math.min(imageHeight, Math.ceil(bottom));
+    return {
+      left,
+      top,
+      width:Math.max(1,right-left),
+      height:Math.max(1,bottom-top)
+    };
+  }
+
+  function cleanCellText(v){
+    return String(v||'')
+      .replace(/[|•●■□◆◇▶►※]/g,' ')
+      .replace(/\s+/g,' ')
+      .trim();
+  }
+
+  function cleanPersonName(v){
+    let s = String(v||'')
+      .replace(/\([^)]*\)/g,' ')
+      .replace(/\[[^\]]*\]/g,' ')
+      .replace(/\s+/g,'')
+      .replace(/[^가-힣]/g,'');
+
+    // 이름 칸은 2~4자의 한글 사람 이름만 허용
+    const match = s.match(/[가-힣]{2,4}/);
+    return match ? match[0] : '';
+  }
+
+  function cleanStoreName(v){
+    let s = cleanCellText(v);
+
+    // 표 셀 밖 UI 문구가 섞이면 제거
+    s = s
+      .replace(/학습자|승인|출석|현황|신청|취소|반려|삭제|차수변경/g,' ')
+      .replace(/\s+/g,' ')
+      .trim();
+
+    return s;
+  }
+
+  async function recognizeCell(worker, dataUrl, rect, mode='7'){
+    await worker.setParameters({
+      preserve_interword_spaces:'1',
+      user_defined_dpi:'300',
+      tessedit_pageseg_mode:String(mode)
+    });
+
+    const result = await worker.recognize(
+      dataUrl,
+      { rectangle:rect },
+      { text:true, tsv:true }
+    );
+
+    return {
+      text:cleanCellText(result?.data?.text || ''),
+      confidence:Number(result?.data?.confidence || 0)
+    };
+  }
+
+  async function extractStudentsFromTable(worker, dataUrl, fullWords, imageWidth, imageHeight, onProgress){
+    const geo = findTableGeometry(fullWords, imageWidth, imageHeight);
+
+    // 핵심: 교육생은 반드시 '소속명 / 매장명 / 이름' 헤더 아래에서만 읽는다.
+    // 따라서 상단의 학습자 승인 현황, 출석현황, 버튼 영역은 구조적으로 제외된다.
+    let rowCenters = clusterRowCenters(
+      fullWords,
+      geo.headerBottom,
+      imageHeight - 2,
+      geo.nameLeft,
+      geo.nameRight,
+      imageHeight
+    );
+
+    // 이름 열 인식이 약하면 매장명 열의 행 위치를 보조로 사용
+    if(rowCenters.length < 1){
+      rowCenters = clusterRowCenters(
+        fullWords,
+        geo.headerBottom,
+        imageHeight - 2,
+        geo.storeLeft,
+        geo.storeRight,
+        imageHeight
+      );
+    }
+
+    if(rowCenters.length < 1){
+      throw new Error('차수별 학습자 정보 표의 교육생 행을 찾지 못했습니다. "소속명 / 매장명 / 이름" 열이 보이도록 화면을 캡처해주세요.');
+    }
+
+    // 행 간격 계산
+    const gaps = [];
+    for(let i=1;i<rowCenters.length;i++){
+      const d = rowCenters[i]-rowCenters[i-1];
+      if(d > 8) gaps.push(d);
+    }
+    gaps.sort((a,b)=>a-b);
+    const medianGap = gaps.length
+      ? gaps[Math.floor(gaps.length/2)]
+      : Math.max(42, imageHeight*0.055);
+
+    const students = [];
+    const seen = new Set();
+
+    for(let i=0;i<rowCenters.length;i++){
+      const cy = rowCenters[i];
+      const prevMid = i===0
+        ? Math.max(geo.headerBottom, cy-medianGap*0.52)
+        : (rowCenters[i-1]+cy)/2;
+      const nextMid = i===rowCenters.length-1
+        ? Math.min(imageHeight, cy+medianGap*0.52)
+        : (cy+rowCenters[i+1])/2;
+
+      // 셀 테두리를 조금 안쪽으로 넣어 옆 열의 글자가 섞이지 않게 함
+      const xPad = Math.max(4, imageWidth*0.006);
+      const yPad = Math.max(2, imageHeight*0.002);
+
+      const affRect = safeRect(
+        geo.affLeft+xPad,
+        prevMid+yPad,
+        geo.affRight-xPad,
+        nextMid-yPad,
+        imageWidth,imageHeight
+      );
+
+      const storeRect = safeRect(
+        geo.storeLeft+xPad,
+        prevMid+yPad,
+        geo.storeRight-xPad,
+        nextMid-yPad,
+        imageWidth,imageHeight
+      );
+
+      const nameRect = safeRect(
+        geo.nameLeft+xPad,
+        prevMid+yPad,
+        geo.nameRight-xPad,
+        nextMid-yPad,
+        imageWidth,imageHeight
+      );
+
+      if(typeof onProgress === 'function'){
+        onProgress(`교육생 ${i+1}/${rowCenters.length} · 매장명과 이름 정밀 확인 중`, Math.round((i/rowCenters.length)*100));
+      }
+
+      // 소속명은 2줄 이상 계층 구조가 있으므로 SINGLE_BLOCK(6)
+      const affOcr = await recognizeCell(worker, dataUrl, affRect, '6');
+
+      // 매장명과 이름은 한 줄 셀로 다시 읽음
+      const storeOcr = await recognizeCell(worker, dataUrl, storeRect, '7');
+      const nameOcr = await recognizeCell(worker, dataUrl, nameRect, '7');
+
+      const affiliation = extractMarketingRegion(affOcr.text);
+      const storeName = cleanStoreName(storeOcr.text);
+      const name = cleanPersonName(nameOcr.text);
+
+      // 사람 이름이 없으면 해당 행은 교육생 데이터로 저장하지 않는다.
+      if(!name) continue;
+
+      // 승인현황 / 출석현황 등 상태 문구가 혹시 셀에 들어와도 최종 차단
+      if(/승인|출석|현황|신청|취소|반려|삭제/.test(storeName)) continue;
+
+      const key = canonicalName(name);
+      if(seen.has(key)) continue;
+      seen.add(key);
+
+      students.push(normalizeStudentRecord({
+        affiliation,
+        storeName,
+        name,
+        durationMin:'',
+        score:null,
+        reason:'',
+        ocrConfidence:Math.round((storeOcr.confidence + nameOcr.confidence)/2)
+      }));
+    }
+
+    return students;
+  }
+
+  function parseStudentsFromOcr(text){
+    const lines = String(text || '')
+      .split(/\r?\n/)
+      .map(cleanOcrLine)
+      .filter(Boolean);
+
+    const byName = new Map();
+
+    function trailingKoreanName(tokens){
+      if(!tokens.length) return '';
+
+      // 일반적인 "김세현"
+      const last = tokens[tokens.length-1].replace(/[^가-힣]/g,'');
+      if(/^[가-힣]{2,4}$/.test(last)) return last;
+
+      // OCR이 "김 세 현"처럼 이름을 한 글자씩 띄운 경우
+      const chars = [];
+      for(let i=tokens.length-1; i>=0 && chars.length<4; i--){
+        const t = tokens[i].replace(/[^가-힣]/g,'');
+        if(/^[가-힣]$/.test(t)) chars.unshift(t);
+        else break;
+      }
+      const joined = chars.join('');
+      if(/^[가-힣]{2,4}$/.test(joined)) return joined;
+
+      return '';
+    }
+
+    for(let line of lines){
+      if(looksLikeUiLine(line)) continue;
+
+      // 과정 정보 / 날짜 / 차수 / 강사 정보는 학생으로 인식하지 않는다.
+      if(/과정명|교육과정|진행\s*일정|날짜|차수|담당\s*강사|강사명/.test(line)) continue;
+      if(/20\d{2}[.\-/]\s*\d{1,2}[.\-/]\s*\d{1,2}/.test(line)) continue;
+
+      // Zoom의 상태/아이콘/시간 문자열 제거
+      line = line
+        .replace(/\b\d{1,2}:\d{2}(?::\d{2})?\b/g,' ')
+        .replace(/\b\d+\s*(분|초|minutes?|mins?)\b/gi,' ')
+        .replace(/\b(예|아니오|Yes|No|음소거됨|음소거해제|Unmute|Mute)\b/gi,' ')
+        .replace(/[|•●■□◆◇▶►※]/g,' ')
+        .replace(/\s+/g,' ')
+        .trim();
+
+      if(!line) continue;
+      if(/강사|SIA|HOST|호스트/i.test(line)) continue;
+
+      // "(문혜인의 iPad)" 같은 경우
+      const deviceMatch = line.match(/([가-힣]{2,4})의\s*(?:iPad|iPhone|Galaxy|Android|Phone|PC|Mac)/i);
+      let name = deviceMatch ? normalizeKoreanName(deviceMatch[1]) : '';
+
+      let noParen = line
+        .replace(/\([^)]*\)/g,' ')
+        .replace(/\[[^\]]*\]/g,' ')
+        .replace(/\s+/g,' ')
+        .trim();
+
+      let tokens = noParen.split(/\s+/).filter(Boolean);
+
+      if(!name){
+        name = trailingKoreanName(tokens);
+      }
+
+      if(!name) continue;
+      if(OCR_STOPWORDS.has(name)) continue;
+      if(/대리점|본점|지점|센터|매장|교육|강사|참가자|학습자|교육생/.test(name)) continue;
+
+      // 이름이 "김 세 현"처럼 띄어진 경우도 prefix를 정확히 잘라낸다.
+      let prefix = noParen;
+      const compactNamePattern = name.split('').join('\\s*');
+      try{
+        prefix = prefix.replace(new RegExp(compactNamePattern + '\\s*$'), '').trim();
+      }catch(e){
+        const idx = prefix.lastIndexOf(name);
+        if(idx >= 0) prefix = prefix.slice(0,idx).trim();
+      }
+
+      prefix = prefix
+        .replace(/^[\-\d.\s]+/,'')
+        .replace(/\b(호스트|Host|HOST)\b/gi,'')
+        .replace(/\s+/g,' ')
+        .trim();
+
+      if(!prefix) continue;
+
+      const split = splitAffiliationStore(prefix);
+
+      // 너무 긴 UI 문자열은 매장으로 보지 않는다.
+      if((split.storeName||'').length > 30) continue;
+
+      const student = normalizeStudentRecord({
+        name,
+        affiliation: split.affiliation,
+        storeName: split.storeName,
+        durationMin:'',
+        score:null,
+        reason:''
+      });
+
+      const key = canonicalName(student.name);
+      if(!key) continue;
+
+      if(!byName.has(key)){
+        byName.set(key, student);
+      }else{
+        const old = byName.get(key);
+        // 더 구체적인 매장/소속 값 우선
+        if(!old.affiliation && student.affiliation) old.affiliation = student.affiliation;
+        if(!old.storeName && student.storeName) old.storeName = student.storeName;
+        byName.set(key, old);
+      }
+    }
+
+    return Array.from(byName.values());
+  }
+
+  async function extractFromImage(base64, mediaType, onProgress){
+    if(typeof Tesseract === 'undefined'){
+      throw new Error('문자인식 프로그램을 불러오지 못했습니다. 인터넷 연결 또는 회사 보안망에서 jsDelivr 접속이 가능한지 확인해주세요.');
+    }
+
+    const dataUrl = `data:${mediaType || 'image/png'};base64,${base64}`;
+
+    const getDimensions = (url)=>new Promise((resolve,reject)=>{
+      const img = new Image();
+      img.onload = ()=>resolve({width:img.naturalWidth || img.width, height:img.naturalHeight || img.height});
+      img.onerror = ()=>reject(new Error('이미지 크기를 확인하지 못했습니다.'));
+      img.src = url;
+    });
+
+    let worker;
+    try{
+      const dims = await getDimensions(dataUrl);
+
+      worker = await Tesseract.createWorker('kor+eng', 1, {
+        logger:m=>{
+          if(typeof onProgress === 'function'){
+            const pct = typeof m.progress === 'number' ? Math.round(m.progress*100) : null;
+            const statusMap = {
+              'loading tesseract core':'문자인식 엔진 준비 중',
+              'initializing tesseract':'문자인식 엔진 초기화 중',
+              'loading language traineddata':'한글 인식 데이터 불러오는 중',
+              'initializing api':'한글 인식 준비 중',
+              'recognizing text':'차수별 학습자 정보 표 찾는 중'
+            };
+            onProgress(statusMap[m.status] || '사진 분석 중', pct);
+          }
+        }
+      });
+
+      await worker.setParameters({
+        preserve_interword_spaces:'1',
+        user_defined_dpi:'300',
+        tessedit_pageseg_mode:'6'
+      });
+
+      // 1차: 전체 화면은 "과정정보"와 표 위치를 찾는 용도만 사용.
+      // 학생 데이터는 여기서 바로 만들지 않는다.
+      const full = await worker.recognize(
+        dataUrl,
+        {},
+        { text:true, tsv:true }
+      );
+
+      const text = full?.data?.text || '';
+      const tsv = full?.data?.tsv || '';
+      const words = parseTsv(tsv);
+
+      if(!text.trim()){
+        throw new Error('사진에서 글자를 읽지 못했습니다. 글자가 크게 보이도록 다시 캡처해주세요.');
+      }
+
+      // 과정명/차수/날짜/강사는 전체 화면에서 추출
+      const meta = extractCourseMeta(text);
+
+      // 교육생은 오직 표의 3개 열 아래 셀에서만 추출
+      const students = await extractStudentsFromTable(
+        worker,
+        dataUrl,
+        words,
+        dims.width,
+        dims.height,
+        onProgress
+      );
+
+      if(students.length === 0){
+        throw new Error('교육생 정보를 찾지 못했습니다. "소속명 / 매장명 / 이름" 열이 선명하게 보이도록 다시 캡처해주세요.');
+      }
+
+      if(typeof onProgress === 'function'){
+        onProgress('교육생 정보 확인 완료', 100);
+      }
+
+      return {
+        courseName:meta.courseName || '',
+        session:meta.session || '',
+        schedule:meta.schedule || '',
+        instructor:meta.instructor || '',
+        students,
+        _ocrText:text
+      };
+
+    }catch(e){
+      console.error('Table OCR error:', e);
+      throw e;
+    }finally{
+      if(worker){
+        try{ await worker.terminate(); }catch(e){}
+      }
+    }
+  }
+
+  // 카메라 원본 사진은 용량이 크고 일부 폰은 HEIC 등 API가 지원하지 않는 포맷으로 찍히므로,
+  // 캔버스에 다시 그려 JPEG로 표준화하면서 크기도 줄인다.
+  // blob: URL은 이 앱이 실행되는 샌드박스에서 막힐 수 있어, FileReader로 읽은 data: URL만 사용한다.
+  function normalizeImage(file){
+    const isHeic = /heic|heif/i.test(file.type||'') || /\.(heic|heif)$/i.test(file.name||'');
+
+    return new Promise((resolve, reject)=>{
+      const reader = new FileReader();
+      reader.onerror = ()=> reject(new Error('사진 파일을 읽는 중 문제가 발생했습니다. 다른 사진으로 다시 시도해주세요.'));
+
+      reader.onload = ()=>{
+        const rawDataUrl = reader.result;
+        const img = new Image();
+
+        img.onload = ()=>{
+          try{
+            const MAX_DIM = 2800;
+            const MIN_DIM = 1800;
+
+            let width = img.width;
+            let height = img.height;
+
+            if(width===0 || height===0){
+              reject(new Error('사진 크기를 읽을 수 없습니다. 다른 사진으로 다시 시도해주세요.'));
+              return;
+            }
+
+            // 작은 캡처는 확대, 너무 큰 사진은 축소
+            let ratio = 1;
+            const longest = Math.max(width,height);
+            if(longest < MIN_DIM){
+              ratio = MIN_DIM / longest;
+            }else if(longest > MAX_DIM){
+              ratio = MAX_DIM / longest;
+            }
+
+            width = Math.round(width * ratio);
+            height = Math.round(height * ratio);
+
+            // 원본 미리보기
+            const previewCanvas = document.createElement('canvas');
+            previewCanvas.width = width;
+            previewCanvas.height = height;
+            const pctx = previewCanvas.getContext('2d', {willReadFrequently:true});
+            pctx.fillStyle = '#fff';
+            pctx.fillRect(0,0,width,height);
+            pctx.drawImage(img, 0, 0, width, height);
+            const previewDataUrl = previewCanvas.toDataURL('image/jpeg', 0.92);
+
+            // OCR 전용 캔버스
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d', {willReadFrequently:true});
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(0,0,width,height);
+            ctx.drawImage(img, 0, 0, width, height);
+
+            const imageData = ctx.getImageData(0,0,width,height);
+            const data = imageData.data;
+
+            // 전체 밝기 샘플로 다크 화면 여부 판단
+            let sum = 0;
+            let count = 0;
+            const step = Math.max(4, Math.floor((width*height)/80000));
+            for(let i=0;i<data.length;i+=4*step){
+              const gray = 0.299*data[i] + 0.587*data[i+1] + 0.114*data[i+2];
+              sum += gray;
+              count++;
+            }
+            const avg = count ? sum/count : 255;
+            const invert = avg < 115;
+
+            // grayscale + contrast 보정
+            for(let i=0;i<data.length;i+=4){
+              let gray = 0.299*data[i] + 0.587*data[i+1] + 0.114*data[i+2];
+              if(invert) gray = 255-gray;
+
+              // 중간 대비를 강하게 해 작은 한글 획을 살림
+              gray = Math.max(0, Math.min(255, (gray-128)*1.55 + 128));
+
+              // 거의 흰/검은 영역은 더 명확하게
+              if(gray > 225) gray = 255;
+              if(gray < 45) gray = 0;
+
+              data[i] = data[i+1] = data[i+2] = gray;
+            }
+            ctx.putImageData(imageData,0,0);
+
+            // PNG가 텍스트 OCR에 더 유리
+            const ocrDataUrl = canvas.toDataURL('image/png');
+
+            resolve({
+              base64: ocrDataUrl.split(',')[1],
+              mediaType:'image/png',
+              dataUrl: previewDataUrl
+            });
+
+          }catch(e){
+            console.error(e);
+            reject(new Error('사진을 처리하지 못했습니다. 화면 캡처 이미지를 다시 사용해주세요.'));
+          }
+        };
+
+        img.onerror = ()=>{
+          if(isHeic){
+            reject(new Error('HEIC 형식은 브라우저에서 바로 읽기 어렵습니다. 사진 대신 화면 캡처 이미지를 사용해주세요.'));
+          }else{
+            reject(new Error('사진을 불러오지 못했습니다. 다른 사진으로 다시 시도해주세요.'));
+          }
+        };
+
+        img.src = rawDataUrl;
+      };
+
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // ---------- render: list view ----------
+  async function renderList(){
+    await consolidateDuplicateSessions();
+    shell.innerHTML = `
+      <div class="topbar">
+        <div class="brand">
+          <div class="brand-mark">✓</div>
+          <div>
+            <div class="brand-title">천하무적동부교육팀<br>교육생 만족도 체크</div>
+            <div class="brand-sub">Zoom 캡처 · 모바일/PC 공용</div>
+          </div>
+        </div>
+        <span class="badge badge-done">WEB</span>
+      </div>
+      <button class="btn btn-amber" id="new-btn">＋ Zoom 화면 사진으로 새 차수 등록</button>
+      <div class="card" style="margin-top:16px;padding:10px 6px;" id="list-wrap"></div>
+    `;
+    document.getElementById('new-btn').onclick = ()=> renderUpload();
+    const wrap = document.getElementById('list-wrap');
+    wrap.innerHTML = `<div class="loading-wrap"><div class="spin"></div>불러오는 중...</div>`;
+    const idx = await getIndex();
+    if(idx.length===0){
+      wrap.innerHTML = `<div class="empty"><div class="empty-num">0</div>등록된 출석 기록이 없습니다.<br>위 버튼으로 첫 기록을 만들어보세요.</div>`;
+      return;
+    }
+    wrap.innerHTML = idx.map((e,i)=>`
+      <div class="session-item" data-id="${esc(e.id)}">
+        <div class="session-idx">${String(idx.length-i).padStart(2,'0')}</div>
+        <div class="session-main">
+          <div class="session-title">${esc(e.title||'제목 없음')}</div>
+          <div class="session-meta">${esc(e.date||'')} · 교육생 ${e.count}명</div>
+        </div>
+        <div class="badge ${e.done?'badge-done':'badge-pending'}">${e.done?'입력완료':`태도입력 ${e.scoredCount}/${e.count}`}</div>
+      </div>
+    `).join('');
+    wrap.querySelectorAll('.session-item').forEach(el=>{
+      el.onclick = ()=> renderDetail(el.dataset.id);
+    });
+  }
+
+  // ---------- render: upload / OCR view ----------
+  function renderUpload(){
+    shell.innerHTML = `
+      <div class="topbar">
+        <button class="back-btn" id="back-btn">← 목록</button>
+      </div>
+      <div class="card">
+        <label class="field-label" style="margin-top:0;">1. Zoom 참가자 화면 사진</label>
+        <div id="upload-zone" class="upload-zone">
+          <div class="upload-icon">📷</div>
+          <div class="upload-txt">사진 촬영 또는 이미지 선택</div>
+          <div class="upload-sub">차수별 학습자 정보의 소속명 · 매장명 · 이름 열이 모두 보이도록 캡처해주세요</div>
+        </div>
+        <input type="file" id="file-input" accept="image/*" style="display:none;">
+        <div id="result-zone"></div>
+      </div>
+    `;
+    document.getElementById('back-btn').onclick = ()=> renderList();
+    const zone = document.getElementById('upload-zone');
+    const input = document.getElementById('file-input');
+    zone.onclick = ()=> input.click();
+    input.onchange = async ()=>{
+      const file = input.files[0];
+      if(!file) return;
+      const resultZone = document.getElementById('result-zone');
+      resultZone.innerHTML = `<div class="loading-wrap"><div class="spin"></div>사진 준비 중...</div>`;
+      let norm;
+      try{
+        norm = await normalizeImage(file);
+      }catch(err){
+        resultZone.innerHTML = `<div class="hint" style="color:var(--red);">${esc(err.message || '사진을 불러오지 못했습니다.')}</div>
+          <button class="btn btn-outline" id="retry-btn" style="margin-top:10px;">다시 촬영/선택</button>`;
+        document.getElementById('retry-btn').onclick = ()=> renderUpload();
+        return;
+      }
+      zone.innerHTML = `<img class="preview-img" src="${norm.dataUrl}">`;
+      resultZone.innerHTML = `<div class="loading-wrap"><div class="spin"></div>차수별 학습자 정보 표를 찾고 매장명·이름을 셀별로 읽는 중...</div>`;
+      try{
+        const parsed = await extractFromImage(norm.base64, norm.mediaType, (status,pct)=>{
+          resultZone.innerHTML = `<div class="loading-wrap"><div class="spin"></div>${esc(status)}${pct!==null?` ${pct}%`:''}</div>
+            <div class="hint" style="text-align:center;">첫 사용 시 한글 문자인식 데이터를 불러오느라 조금 더 걸릴 수 있습니다.</div>`;
+        });
+        draftStudents = mergeStudents([], (parsed.students||[]).map(s=>normalizeStudentRecord(s)));
+        renderDraftEditor({
+          courseName: parsed.courseName || '',
+          session: parsed.session || '',
+          schedule: parsed.schedule || '',
+          instructor: parsed.instructor || ''
+        });
+      }catch(err){
+        resultZone.innerHTML = `<div class="hint" style="color:var(--red);">인식에 실패했습니다: ${esc(err.message || '알 수 없는 오류')}</div>
+          <div class="row" style="margin-top:10px;">
+            <button class="btn btn-outline btn-sm" id="retry-btn">다시 촬영/선택</button>
+            <button class="btn btn-outline btn-sm" id="manual-btn">사진 없이 직접 입력</button>
+          </div>`;
+        document.getElementById('retry-btn').onclick = ()=> renderUpload();
+        document.getElementById('manual-btn').onclick = ()=>{
+          draftStudents = [];
+          renderDraftEditor({courseName:'', session:'', schedule:'', instructor:''});
+        };
+      }
+    };
+  }
+
+  function renderDraftEditor(guess){
+    const resultZone = document.getElementById('result-zone');
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}.${String(today.getMonth()+1).padStart(2,'0')}.${String(today.getDate()).padStart(2,'0')}`;
+
+    resultZone.innerHTML = `
+      <label class="field-label">2. 교육과정 정보 확인</label>
+
+      <label class="mini-label">과정명</label>
+      <input type="text" id="course-input" value="${esc(guess.courseName||'')}" placeholder="예: [부산] 유선인증과정 BOOST(8월)">
+
+      <label class="mini-label" style="margin-top:8px;">차수</label>
+      <input type="text" id="session-input" value="${esc(guess.session||'')}" placeholder="예: 18 또는 18차수">
+
+      <label class="mini-label" style="margin-top:8px;">날짜</label>
+      <input type="text" id="schedule-input" value="${esc(guess.schedule || todayStr)}" placeholder="예: 2026.08.12">
+
+      <label class="mini-label" style="margin-top:8px;">강사</label>
+      <input type="text" id="instructor-input" value="${esc(guess.instructor||'')}" placeholder="담당 강사">
+
+      <div class="hint" style="margin-top:7px;">
+        위 4개 항목만 사진에서 자동 입력합니다. 자동 인식값이 다르면 여기서 바로 수정하세요.
+      </div>
+
+      <label class="field-label">3. 교육생 정보 확인 (${draftStudents.length}명)</label>
+      <div class="student-head-grid">
+        <div>소속</div><div>매장명</div><div>이름</div><div>참여 시간</div><div></div>
+      </div>
+      <div id="draft-list"></div>
+
+      <button class="btn btn-outline btn-sm" id="add-row-btn" style="margin-top:4px;">+ 교육생 직접 추가</button>
+      <div class="hint">
+        교육생은 <b>차수별 학습자 정보 표의 소속명 / 매장명 / 이름 열만</b> 읽습니다. 소속은 <b>동대구마케팅팀 → 동대구</b>처럼 지역명만 입력하고, <b>승인현황·출석현황은 읽지 않습니다.</b> 참여 시간(분)은 직접 입력합니다. 같은 이름은 자동으로 1명으로 합칩니다.
+      </div>
+      <button class="btn btn-primary" id="save-draft-btn" style="margin-top:16px;">명단 저장하고 태도 입력하기</button>
+    `;
+
+    renderDraftRows();
+
+    document.getElementById('add-row-btn').onclick = ()=>{
+      draftStudents.push(normalizeStudentRecord({
+        id:uid(), affiliation:'', storeName:'', name:'', durationMin:'', score:null, reason:''
+      }));
+      renderDraftRows();
+    };
+
+    document.getElementById('save-draft-btn').onclick = async ()=>{
+      const courseName = document.getElementById('course-input').value.trim();
+      const session = normalizeSession(document.getElementById('session-input').value);
+      const schedule = document.getElementById('schedule-input').value.trim() || todayStr;
+      const instructor = document.getElementById('instructor-input').value.trim();
+
+      if(courseName===''){
+        toast('과정명을 입력해주세요');
+        return;
+      }
+
+      const cleaned = mergeStudents([], draftStudents.filter(s=>String(s.name||'').trim()!==''));
+      if(cleaned.length===0){
+        toast('교육생을 최소 1명 입력해주세요');
+        return;
+      }
+
+      // 같은 과정 + 같은 차수 + 같은 날짜가 이미 있으면 새 차수를 만들지 않고 갱신
+      let sess = await findExistingSession(courseName, session, schedule);
+
+      if(sess){
+        sess.courseName = courseName;
+        sess.session = session;
+        sess.instructor = instructor || sess.instructor || '';
+        sess.title = buildTitle(courseName, session);
+        sess.date = schedule;
+        sess.students = mergeStudents(sess.students || [], cleaned);
+
+        const ok = await saveSession(sess);
+        toast(ok
+          ? '기존 차수에 중복 없이 명단을 반영했습니다.'
+          : '저장에 실패했습니다');
+        if(ok) renderDetail(sess.id);
+        return;
+      }
+
+      sess = {
+        id: uid(),
+        courseName,
+        session,
+        instructor,
+        title: buildTitle(courseName, session),
+        date: schedule,
+        students: cleaned
+      };
+
+      const ok = await saveSession(sess);
+      toast(ok
+        ? '명단이 저장되었습니다. 이어서 태도를 입력하세요.'
+        : '저장에 실패했습니다');
+      if(ok) renderDetail(sess.id);
+    };
+  }
+
+  // 숫자만 입력하면 자동으로 "차수"를 붙여준다. 이미 "차수"가 붙어 있으면 그대로 둔다.
+  function normalizeSession(v){
+    v = (v||'').trim();
+    if(v==='') return '';
+    if(/차수\s*$/.test(v)) return v;
+    if(/^\d+$/.test(v)) return v+'차수';
+    return v+' 차수';
+  }
+
+  function buildTitle(courseName, session){
+    courseName = (courseName||'').trim();
+    session = (session||'').trim();
+    if(!courseName) return '제목 없음';
+    if(!session) return courseName;
+    return `${courseName} ${session}`;
+  }
+
+  // 파일명/이미지 상단 표기용: "과정명_차수_담당강사" 형식
+  function buildFileBase(s){
+    const parts = [s.courseName || s.title || '교육', s.session || '', s.instructor || ''].filter(p=>p && p.trim()!=='');
+    return parts.join('_').replace(/[\\/:*?"<>|]/g,'').trim() || '출석태도';
+  }
+
+  function renderDraftRows(){
+    const wrap = document.getElementById('draft-list');
+
+    draftStudents = mergeStudents([], draftStudents || []);
+
+    wrap.innerHTML = draftStudents.map((raw,i)=>{
+      const s = normalizeStudentRecord(raw);
+      draftStudents[i] = s;
+      return `
+        <div class="student-row triplet" data-i="${i}">
+          <div class="mini-field">
+            <span class="mini-label">소속</span>
+            <input type="text" class="da" value="${esc(s.affiliation)}" placeholder="예: 레이스대리점">
+          </div>
+          <div class="mini-field">
+            <span class="mini-label">매장명</span>
+            <input type="text" class="ds" value="${esc(s.storeName)}" placeholder="예: 율하점" title="${s.ocrConfidence!==null && s.ocrConfidence<70?'OCR 신뢰도가 낮습니다. 이미지와 한 번 비교해주세요.':''}">
+          </div>
+          <div class="mini-field student-name-field">
+            <span class="mini-label">이름</span>
+            <input type="text" class="dn" value="${esc(s.name)}" placeholder="예: 김세현" title="${s.ocrConfidence!==null && s.ocrConfidence<70?'OCR 신뢰도가 낮습니다. 이미지와 한 번 비교해주세요.':''}">
+          </div>
+          <div class="mini-field student-duration-field">
+            <span class="mini-label">참여 시간(분)</span>
+            <input type="number" min="0" class="dd" value="${esc(s.durationMin||'')}" placeholder="예: 91">
+          </div>
+          <button class="rm-btn" data-rm="${i}" title="삭제">✕</button>
+        </div>
+      `;
+    }).join('');
+
+    wrap.querySelectorAll('.student-row').forEach(row=>{
+      const i = +row.dataset.i;
+      row.querySelector('.da').oninput = e=> draftStudents[i].affiliation = e.target.value;
+      row.querySelector('.ds').oninput = e=> draftStudents[i].storeName = e.target.value;
+      row.querySelector('.dn').oninput = e=> draftStudents[i].name = e.target.value;
+      row.querySelector('.dd').oninput = e=> draftStudents[i].durationMin = e.target.value === '' ? '' : Math.max(0, +e.target.value);
+    });
+
+    wrap.querySelectorAll('[data-rm]').forEach(btn=>{
+      btn.onclick = ()=>{
+        draftStudents.splice(+btn.dataset.rm,1);
+        renderDraftRows();
+      };
+    });
+  }
+
+  // ---------- render: session detail / score entry ----------
+  async function renderDetail(id){
+    shell.innerHTML = `
+      <div class="topbar"><button class="back-btn" id="back-btn">← 목록</button></div>
+      <div class="loading-wrap"><div class="spin"></div>불러오는 중...</div>
+    `;
+    document.getElementById('back-btn').onclick = ()=> renderList();
+    currentSession = await getSession(id);
+    if(!currentSession){ toast('기록을 찾을 수 없습니다'); renderList(); return; }
+    drawDetail();
+  }
+
+  function drawDetail(){
+    const s = currentSession;
+    const scored = s.students.filter(st=>st.score!==null && st.score!=='' && st.score!==undefined).length;
+    shell.innerHTML = `
+      <div class="topbar">
+        <button class="back-btn" id="back-btn">← 목록</button>
+        <button class="btn-danger-ghost" id="del-btn">삭제</button>
+      </div>
+      <div class="card" style="padding-bottom:14px;">
+        <div id="title-view">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+            <div style="font-size:16px;font-weight:800;color:var(--navy-deep);">${esc(s.title)}</div>
+            <button class="btn-ghost btn-sm" id="edit-title-btn" style="flex-shrink:0;">수정</button>
+          </div>
+          <div class="session-meta" style="margin-top:2px;">${esc(s.date)}${s.instructor? ' · 담당 강사 '+esc(s.instructor) : ''}</div>
+        </div>
+        <div class="stat-strip" style="margin-top:14px;">
+          <div class="stat-box"><div class="stat-num">${s.students.length}</div><div class="stat-lbl">교육생</div></div>
+          <div class="stat-box"><div class="stat-num">${scored}</div><div class="stat-lbl">입력완료</div></div>
+          <div class="stat-box"><div class="stat-num">${s.students.length-scored}</div><div class="stat-lbl">미입력</div></div>
+        </div>
+      </div>
+      <div id="score-list"></div>
+      <div class="fab-export">
+        <div class="row" style="margin-bottom:8px;">
+          <button class="btn btn-primary" id="save-btn">저장</button>
+        </div>
+        <div class="row">
+          <button class="btn btn-outline" id="export-xlsx-btn">엑셀로 내보내기</button>
+          <button class="btn btn-outline" id="export-img-btn">이미지로 저장</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('back-btn').onclick = ()=> renderList();
+    document.getElementById('edit-title-btn').onclick = ()=>{
+      const tv = document.getElementById('title-view');
+      tv.innerHTML = `
+        <label class="field-label" style="margin-top:0;">교육과정명</label>
+        <input type="text" id="edit-course" value="${esc(s.courseName || s.title || '')}" placeholder="교육과정명">
+        <label class="field-label">차수</label>
+        <input type="text" id="edit-session" value="${esc(s.session || '')}" placeholder="숫자만 입력해도 자동으로 '차수'가 붙습니다. 예: 18">
+        <label class="field-label">진행 일정</label>
+        <input type="text" id="edit-schedule" value="${esc(s.date || '')}" placeholder="예: 2026.08.12">
+        <label class="field-label">담당 강사</label>
+        <input type="text" id="edit-instructor" value="${esc(s.instructor || '')}" placeholder="담당 강사">
+        <div class="row" style="margin-top:10px;">
+          <button class="btn btn-outline btn-sm" id="cancel-title-btn">취소</button>
+          <button class="btn btn-primary btn-sm" id="confirm-title-btn">확인</button>
+        </div>
+      `;
+      document.getElementById('cancel-title-btn').onclick = ()=> drawDetail();
+      document.getElementById('confirm-title-btn').onclick = async ()=>{
+        const courseName = document.getElementById('edit-course').value.trim();
+        const session = normalizeSession(document.getElementById('edit-session').value);
+        const schedule = document.getElementById('edit-schedule').value.trim();
+        const instructor = document.getElementById('edit-instructor').value.trim();
+        if(courseName===''){ toast('교육과정명을 입력해주세요'); return; }
+        if(schedule===''){ toast('진행 일정을 입력해주세요'); return; }
+        s.courseName = courseName;
+        s.session = session;
+        s.title = buildTitle(courseName, session);
+        s.date = schedule;
+        s.instructor = instructor;
+        const ok = await saveSession(s);
+        toast(ok?'수정되었습니다':'수정 실패');
+        drawDetail();
+      };
+    };
+    document.getElementById('del-btn').onclick = async ()=>{
+      if(confirm('이 출석 기록을 삭제할까요? 되돌릴 수 없습니다.')){
+        await deleteSession(s.id); toast('삭제되었습니다'); renderList();
+      }
+    };
+    document.getElementById('save-btn').onclick = async ()=>{
+      const ok = await saveSession(currentSession);
+      toast(ok?'저장되었습니다':'저장 실패');
+      if(ok) drawDetail();
+    };
+    document.getElementById('export-xlsx-btn').onclick = exportXlsx;
+    document.getElementById('export-img-btn').onclick = exportImage;
+
+    const list = document.getElementById('score-list');
+    list.innerHTML = s.students.map((st,i)=>{
+      const filled = st.score!==null && st.score!=='' && st.score!==undefined;
+      return `
+      <div class="score-card ${filled?'filled':''}" data-i="${i}">
+        <div class="sc-head">
+          <div style="flex:1;min-width:0;">
+            <div class="row" style="gap:6px;">
+              <input type="text" class="sc-affil" value="${esc(st.affiliation||'')}" placeholder="소속">
+              <input type="text" class="sc-store" value="${esc(st.storeName||'')}" placeholder="매장명">
+            </div>
+            <input type="text" class="sc-name-input" value="${esc(st.name||'')}" placeholder="이름" style="margin-top:6px;font-weight:800;">
+            <div style="display:flex;align-items:center;gap:6px;margin-top:6px;">
+              <input type="number" min="0" class="sc-duration" value="${esc(st.durationMin||'')}" placeholder="참여 시간">
+              <span style="font-size:12px;color:var(--sub);white-space:nowrap;">분</span>
+            </div>
+          </div>
+        </div>
+        <div class="chip-row">
+          ${REASON_PRESETS.map(p=>`<span class="chip ${st.score==p.score?'active':''}" data-preset="${p.score}">${p.label}</span>`).join('')}
+        </div>
+        <div class="score-input-row">
+          <input type="number" min="0" max="100" class="sc-score" value="${st.score!==null&&st.score!==undefined?st.score:''}" placeholder="점수">
+          <span>점</span>
+        </div>
+        <textarea class="sc-reason" placeholder="사유 (프리셋 선택 시 자동 입력, 직접 수정 가능)">${esc(st.reason)}</textarea>
+      </div>`;
+    }).join('');
+
+    list.querySelectorAll('.score-card').forEach(card=>{
+      const i = +card.dataset.i;
+      card.querySelectorAll('.chip').forEach(chip=>{
+        chip.onclick = ()=>{
+          const preset = REASON_PRESETS.find(p=>p.score===+chip.dataset.preset);
+          s.students[i].score = preset.score;
+          s.students[i].reason = preset.reason;
+          drawDetail();
+        };
+      });
+      card.querySelector('.sc-score').oninput = e=>{
+        const v = e.target.value;
+        s.students[i].score = v===''? null : Math.max(0, Math.min(100, +v));
+      };
+      card.querySelector('.sc-reason').oninput = e=>{ s.students[i].reason = e.target.value; };
+      card.querySelector('.sc-affil').oninput = e=>{ s.students[i].affiliation = e.target.value; };
+      card.querySelector('.sc-store').oninput = e=>{ s.students[i].storeName = e.target.value; };
+      card.querySelector('.sc-name-input').oninput = e=>{ s.students[i].name = e.target.value; };
+      card.querySelector('.sc-duration').oninput = e=>{
+        s.students[i].durationMin = e.target.value === '' ? '' : Math.max(0, +e.target.value);
+      };
+    });
+  }
+
+  // ---------- export: excel ----------
+  function exportXlsx(){
+    const s = currentSession;
+    const fileBase = buildFileBase(s);
+
+    const rows = s.students.map(raw=>{
+      const st = normalizeStudentRecord(raw);
+      return `
+      <tr>
+        <td>${esc(st.affiliation||'')}</td>
+        <td>${esc(st.storeName||'')}</td>
+        <td>${esc(st.name||'')}</td>
+        <td>${esc(st.durationMin||'')}</td>
+        <td>${st.score===null||st.score===undefined?'':esc(st.score)}</td>
+        <td>${esc(st.reason||'')}</td>
+      </tr>`;
+    }).join('');
+
+    const excelHtml = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+table{border-collapse:collapse;font-family:"Malgun Gothic",sans-serif;font-size:11pt}
+th,td{border:1px solid #999;padding:6px 8px;vertical-align:top}
+th{font-weight:bold;background:#e9ecff}
+.title{font-size:15pt;font-weight:bold}
+.meta{font-size:10pt}
+</style>
+</head>
+<body>
+<div class="title">${esc(s.title||fileBase)}</div>
+<div class="meta">${esc(s.date||'')}${s.instructor?' · 담당 강사: '+esc(s.instructor):''}</div>
+<br>
+<table>
+<thead><tr>
+<th>소속</th><th>매장명</th><th>이름</th><th>참여 시간(분)</th><th>점수</th><th>사유</th>
+</tr></thead>
+<tbody>${rows}</tbody>
+</table>
+</body>
+</html>`;
+
+    const blob = new Blob(['\uFEFF', excelHtml], {type:'application/vnd.ms-excel;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${fileBase}.xls`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 1500);
+    toast('Excel 파일이 저장되었습니다');
+  }
+
+  function csvEscape(v){
+    const s = (v===undefined||v===null?'':String(v));
+    return '"'+s.replace(/"/g,'""')+'"';
+  }
+  function exportCsvFallback(){
+    const s = currentSession;
+    const fileBase = buildFileBase(s);
+    const rows = [
+      ['소속','매장명','이름','참여 시간(분)','점수','사유'],
+      ...s.students.map(raw=>{
+        const st = normalizeStudentRecord(raw);
+        return [st.affiliation, st.storeName, st.name, st.durationMin, st.score, st.reason];
+      })
+    ];
+    const csv = '\uFEFF' + rows.map(r=>r.map(csvEscape).join(',')).join('\r\n');
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href=url; a.download=`${fileBase}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 1500);
+  }
+
+  // ---------- export: image (drawn directly on canvas, no external lib) ----------
+  function wrapText(ctx, text, maxWidth){
+    text = text || '';
+    if(text==='') return [''];
+    const lines = [];
+    let line = '';
+    for(const ch of text){
+      const test = line + ch;
+      if(ctx.measureText(test).width > maxWidth && line !== ''){
+        lines.push(line);
+        line = ch;
+      }else{
+        line = test;
+      }
+    }
+    if(line !== '') lines.push(line);
+    return lines.length ? lines : [''];
+  }
+
+  function downloadDataUrl(dataUrl, filename){
+    const link = document.createElement('a');
+    link.href = dataUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  function exportImage(){
+    const s = currentSession;
+    const fileBase = buildFileBase(s);
+    const SCALE = 2;
+    const W = 760;
+    const PAD = 26;
+    const colAffil = 105, colStore = 105, colName = 85, colDuration = 70, colScore = 45;
+    const colReason = W - PAD*2 - colAffil - colStore - colName - colDuration - colScore;
+    const lineH = 16;
+    const rowPadV = 10;
+    const headerH = 92;
+    const tableHeadH = 32;
+
+    const meas = document.createElement('canvas').getContext('2d');
+    meas.font = '12px -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
+
+    const rows = s.students.map(raw=>{
+      const st = normalizeStudentRecord(raw);
+      const scoreTxt = (st.score!==null && st.score!==undefined && st.score!=='') ? String(st.score) : '-';
+      const reasonLines = wrapText(meas, st.reason || '-', colReason - 12);
+      const rowH = Math.max(lineH*2 + rowPadV, reasonLines.length*lineH + rowPadV);
+      return {
+        affiliation:st.affiliation||'-',
+        storeName:st.storeName||'-',
+        name:st.name||'',
+        durationTxt:st.durationMin!=='' && st.durationMin!==undefined ? String(st.durationMin)+'분' : '-',
+        scoreTxt,
+        reasonLines,
+        rowH
+      };
+    });
+
+    const totalH = headerH + tableHeadH + rows.reduce((a,r)=>a+r.rowH,0) + PAD;
+    const canvas = document.createElement('canvas');
+    canvas.width = W*SCALE;
+    canvas.height = totalH*SCALE;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(SCALE, SCALE);
+
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0,0,W,totalH);
+
+    ctx.fillStyle = '#1E1B4B';
+    ctx.font = '800 19px -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
+    ctx.fillText(fileBase, PAD, 36);
+    ctx.fillStyle = '#6B7280';
+    ctx.font = '600 12px -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
+    ctx.fillText(`${s.date || ''} · 교육생 ${s.students.length}명`, PAD, 56);
+
+    ctx.strokeStyle = '#E7E9F5';
+    ctx.beginPath(); ctx.moveTo(PAD,70); ctx.lineTo(W-PAD,70); ctx.stroke();
+
+    let y = headerH;
+    ctx.fillStyle = '#4F46E5';
+    ctx.fillRect(PAD,y,W-PAD*2,tableHeadH);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = '700 12px -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
+
+    ctx.fillText('소속', PAD+10, y+20);
+    ctx.fillText('매장명', PAD+colAffil+10, y+20);
+    ctx.fillText('이름', PAD+colAffil+colStore+10, y+20);
+    ctx.fillText('참여', PAD+colAffil+colStore+colName+10, y+20);
+    ctx.fillText('점수', PAD+colAffil+colStore+colName+colDuration+10, y+20);
+    ctx.fillText('사유', PAD+colAffil+colStore+colName+colDuration+colScore+10, y+20);
+    y += tableHeadH;
+
+    rows.forEach((r,i)=>{
+      ctx.fillStyle = i%2 ? '#F5F6FF' : '#FFFFFF';
+      ctx.fillRect(PAD,y,W-PAD*2,r.rowH);
+
+      ctx.font = '500 11.5px -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
+      ctx.fillStyle = '#374151';
+      ctx.fillText(r.affiliation, PAD+10, y+18);
+      ctx.fillText(r.storeName, PAD+colAffil+10, y+18);
+
+      ctx.font = '700 12.5px -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
+      ctx.fillStyle = '#1F2430';
+      ctx.fillText(r.name, PAD+colAffil+colStore+10, y+18);
+      ctx.fillText(r.durationTxt, PAD+colAffil+colStore+colName+10, y+18);
+      ctx.fillText(r.scoreTxt, PAD+colAffil+colStore+colName+colDuration+10, y+18);
+
+      ctx.font = '500 11.5px -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
+      ctx.fillStyle = '#374151';
+      r.reasonLines.forEach((ln,li)=>
+        ctx.fillText(ln, PAD+colAffil+colStore+colName+colDuration+colScore+10, y+18+li*lineH)
+      );
+
+      ctx.strokeStyle = '#E7E9F5';
+      ctx.beginPath(); ctx.moveTo(PAD,y+r.rowH); ctx.lineTo(W-PAD,y+r.rowH); ctx.stroke();
+      y += r.rowH;
+    });
+
+    try{
+      const dataUrl = canvas.toDataURL('image/png');
+      downloadDataUrl(dataUrl, `${fileBase}.png`);
+      toast('이미지가 저장되었습니다');
+    }catch(e){
+      console.error('image export fail', e);
+      toast('이미지 생성에 실패했습니다');
+    }
+  }
+
+  renderList();
+})();
+</script>
+
+</body>
+</html>
