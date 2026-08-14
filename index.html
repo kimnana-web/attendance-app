@@ -120,7 +120,7 @@
   .student-row input{flex:1;}
   .student-row.triplet{
     display:grid;
-    grid-template-columns:1fr 1fr 1fr 34px;
+    grid-template-columns:1fr 1fr 1fr 105px 34px;
     gap:7px;
     align-items:end;
     padding:11px;
@@ -141,7 +141,7 @@
   }
   .student-head-grid{
     display:grid;
-    grid-template-columns:1fr 1fr 1fr 34px;
+    grid-template-columns:1fr 1fr 1fr 105px 34px;
     gap:7px;
     padding:0 11px 6px;
     color:var(--sub);
@@ -153,6 +153,9 @@
       grid-template-columns:1fr 1fr 34px;
     }
     .student-row.triplet .student-name-field{
+      grid-column:1 / 3;
+    }
+    .student-row.triplet .student-duration-field{
       grid-column:1 / 3;
     }
     .student-head-grid{display:none;}
@@ -209,7 +212,7 @@
 </style>
 </head>
 <body>
-<div style="position:fixed;right:10px;bottom:10px;z-index:99999;background:#111827;color:#fff;padding:7px 10px;border-radius:999px;font:700 11px/1.2 -apple-system,BlinkMacSystemFont,'Malgun Gothic',sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.18);">V4 · API 키 불필요 · 브라우저 OCR</div>
+<div style="position:fixed;right:10px;bottom:10px;z-index:99999;background:#111827;color:#fff;padding:7px 10px;border-radius:999px;font:700 11px/1.2 -apple-system,BlinkMacSystemFont,'Malgun Gothic',sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.18);">V6 · 소속 지역명 자동정리 · 참여시간 수기입력</div>
 
 <div id="app-root">
   <div class="shell" id="shell"></div>
@@ -219,7 +222,7 @@
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
 <script>
-console.log('attendance-app V4 - local browser OCR - no API key required');
+console.log('attendance-app V6 - marketing team region parsing + manual duration');
 (function(){
   try{ document.title = '천하무적동부교육팀 교육생 만족도 체크'; }catch(e){}
   const shell = document.getElementById('shell');
@@ -317,37 +320,96 @@ console.log('attendance-app V4 - local browser OCR - no API key required');
 
   // 기존 구버전의 "소속" 한 칸에 "대리점 + 매장명"이 함께 들어 있던 데이터를
   // 새 구조(소속/매장명)로 최대한 안전하게 분리한다.
+  function extractMarketingRegion(raw){
+    raw = String(raw || '')
+      .replace(/[|•●■□◆◇▶►※]/g,' ')
+      .replace(/\s+/g,' ')
+      .trim();
+
+    if(!raw) return '';
+
+    // 예:
+    // 동대구마케팅팀 -> 동대구
+    // 경북마케팅팀 -> 경북
+    // 서대구 마케팅팀 -> 서대구
+    // 한 줄에 마케팅팀 정보가 2개 이상 잡히면 두 번째 값을 우선 사용
+    const matches = [...raw.matchAll(/([가-힣]{2,10})\s*마케팅팀/g)]
+      .map(m => (m[1] || '').trim())
+      .filter(Boolean);
+
+    if(matches.length >= 2) return matches[1];
+    if(matches.length === 1) return matches[0];
+
+    return '';
+  }
+
   function splitAffiliationStore(raw){
-    raw = String(raw||'').replace(/\s+/g,' ').trim();
+    raw = String(raw||'')
+      .replace(/[|•●■□◆◇▶►※]/g,' ')
+      .replace(/\s+/g,' ')
+      .trim();
+
     if(!raw) return {affiliation:'', storeName:''};
 
-    const tokens = raw.split(' ').filter(Boolean);
-    const storePattern = /(본점|지점|직영점|대리점점|센터|매장|스토어|플라자|점)$/;
+    // 소속은 '○○마케팅팀'에서 지역명만 가져온다.
+    // 한 줄에 마케팅팀 값이 2개라면 두 번째 값을 우선 사용한다.
+    const marketingRegion = extractMarketingRegion(raw);
 
-    if(tokens.length >= 2 && storePattern.test(tokens[tokens.length-1])){
+    // 매장명 판별용으로 '○○마케팅팀' 문자열은 제거
+    let storeSource = raw.replace(/[가-힣]{2,10}\s*마케팅팀/g,' ').replace(/\s+/g,' ').trim();
+
+    // "레이스대리점율하점"처럼 붙어서 인식된 경우
+    const dealerAttached = storeSource.match(/^(.+?대리점)\s*(.+)$/);
+    if(dealerAttached){
+      const rest = dealerAttached[2].trim();
+      if(rest && /(점|본점|지점|센터|매장|스토어|플라자)$/.test(rest)){
+        return {
+          affiliation: marketingRegion,
+          storeName: rest
+        };
+      }
+    }
+
+    const tokens = storeSource.split(' ').filter(Boolean);
+    const last = tokens[tokens.length-1] || '';
+    const storePattern = /(점|본점|지점|직영점|센터|매장|스토어|플라자)$/;
+
+    if(tokens.length >= 2 && storePattern.test(last)){
       return {
-        affiliation: tokens.slice(0,-1).join(' ').trim(),
-        storeName: tokens[tokens.length-1].trim()
+        affiliation: marketingRegion,
+        storeName: last.trim()
       };
     }
 
-    // "한백외동점"처럼 띄어쓰기가 전혀 없는 경우에는
-    // 억지로 소속을 추측하지 않고 전체를 매장명으로 둔다.
-    if(tokens.length === 1){
-      return {affiliation:'', storeName:raw};
+    if(tokens.length === 1 && storePattern.test(storeSource)){
+      return {
+        affiliation: marketingRegion,
+        storeName: storeSource
+      };
     }
 
-    // 구조가 애매하면 오인식을 피하기 위해 전체를 매장명으로 둔다.
-    return {affiliation:'', storeName:raw};
+    // 매장명이 애매하더라도 소속 지역은 마케팅팀 값에서 정확히 분리
+    return {
+      affiliation: marketingRegion,
+      storeName: storeSource
+    };
   }
 
   function normalizeStudentRecord(st){
     st = st || {};
-    const split = splitAffiliationStore(st.affiliation || '');
+    const rawAffiliation = String(st.organization || st.affiliationOrg || st.affiliation || '').trim();
+    const rawStore = String(st.storeName || '').trim();
+
+    const combinedForParsing = [rawAffiliation, rawStore].filter(Boolean).join(' ');
+    const split = splitAffiliationStore(combinedForParsing);
+
+    // 기존에 '동대구마케팅팀'처럼 저장된 값도 '동대구'로 정리
+    const directRegion = extractMarketingRegion(rawAffiliation);
+
     return {
       id: st.id || uid(),
-      affiliation: String(st.organization || st.affiliationOrg || split.affiliation || '').trim(),
-      storeName: String(st.storeName || split.storeName || '').trim(),
+      affiliation: String(directRegion || split.affiliation || '').trim(),
+      storeName: String(rawStore || split.storeName || '').trim(),
       name: String(st.name || '').trim(),
       score: st.score===undefined ? null : st.score,
       reason: st.reason || '',
@@ -552,6 +614,26 @@ console.log('attendance-app V4 - local browser OCR - no API key required');
 
     const byName = new Map();
 
+    function trailingKoreanName(tokens){
+      if(!tokens.length) return '';
+
+      // 일반적인 "김세현"
+      const last = tokens[tokens.length-1].replace(/[^가-힣]/g,'');
+      if(/^[가-힣]{2,4}$/.test(last)) return last;
+
+      // OCR이 "김 세 현"처럼 이름을 한 글자씩 띄운 경우
+      const chars = [];
+      for(let i=tokens.length-1; i>=0 && chars.length<4; i--){
+        const t = tokens[i].replace(/[^가-힣]/g,'');
+        if(/^[가-힣]$/.test(t)) chars.unshift(t);
+        else break;
+      }
+      const joined = chars.join('');
+      if(/^[가-힣]{2,4}$/.test(joined)) return joined;
+
+      return '';
+    }
+
     for(let line of lines){
       if(looksLikeUiLine(line)) continue;
 
@@ -559,45 +641,47 @@ console.log('attendance-app V4 - local browser OCR - no API key required');
       if(/과정명|교육과정|진행\s*일정|날짜|차수|담당\s*강사|강사명/.test(line)) continue;
       if(/20\d{2}[.\-/]\s*\d{1,2}[.\-/]\s*\d{1,2}/.test(line)) continue;
 
-      // Zoom 상태/시간/기기 표시 제거
+      // Zoom의 상태/아이콘/시간 문자열 제거
       line = line
         .replace(/\b\d{1,2}:\d{2}(?::\d{2})?\b/g,' ')
         .replace(/\b\d+\s*(분|초|minutes?|mins?)\b/gi,' ')
-        .replace(/\b(예|아니오|Yes|No|음소거됨|음소거해제)\b/gi,' ')
+        .replace(/\b(예|아니오|Yes|No|음소거됨|음소거해제|Unmute|Mute)\b/gi,' ')
+        .replace(/[|•●■□◆◇▶►※]/g,' ')
         .replace(/\s+/g,' ')
         .trim();
 
       if(!line) continue;
+      if(/강사|SIA|HOST|호스트/i.test(line)) continue;
 
-      // "(문혜인의 iPad)" 같은 경우 사람 이름을 우선 사용
+      // "(문혜인의 iPad)" 같은 경우
       const deviceMatch = line.match(/([가-힣]{2,4})의\s*(?:iPad|iPhone|Galaxy|Android|Phone|PC|Mac)/i);
       let name = deviceMatch ? normalizeKoreanName(deviceMatch[1]) : '';
 
-      const noParen = line
+      let noParen = line
         .replace(/\([^)]*\)/g,' ')
         .replace(/\[[^\]]*\]/g,' ')
         .replace(/\s+/g,' ')
         .trim();
 
-      const tokens = noParen.split(/\s+/).filter(Boolean);
+      let tokens = noParen.split(/\s+/).filter(Boolean);
 
       if(!name){
-        // 학생 이름은 기본적으로 줄의 맨 끝 토큰에서 찾는다.
-        const last = tokens[tokens.length-1] || '';
-        const cand = normalizeKoreanName(last);
-        if(cand && !OCR_STOPWORDS.has(cand) &&
-           !/대리점|본점|지점|센터|매장|교육|강사|참가자|학습자|교육생/.test(cand)){
-          name = cand;
-        }
+        name = trailingKoreanName(tokens);
       }
 
       if(!name) continue;
-      if(/강사|SIA/i.test(line)) continue;
+      if(OCR_STOPWORDS.has(name)) continue;
+      if(/대리점|본점|지점|센터|매장|교육|강사|참가자|학습자|교육생/.test(name)) continue;
 
-      // 이름 앞부분만 소속/매장명 후보로 사용
+      // 이름이 "김 세 현"처럼 띄어진 경우도 prefix를 정확히 잘라낸다.
       let prefix = noParen;
-      const nameIdx = prefix.lastIndexOf(name);
-      if(nameIdx >= 0) prefix = prefix.slice(0,nameIdx).trim();
+      const compactNamePattern = name.split('').join('\\s*');
+      try{
+        prefix = prefix.replace(new RegExp(compactNamePattern + '\\s*$'), '').trim();
+      }catch(e){
+        const idx = prefix.lastIndexOf(name);
+        if(idx >= 0) prefix = prefix.slice(0,idx).trim();
+      }
 
       prefix = prefix
         .replace(/^[\-\d.\s]+/,'')
@@ -605,17 +689,22 @@ console.log('attendance-app V4 - local browser OCR - no API key required');
         .replace(/\s+/g,' ')
         .trim();
 
+      if(!prefix) continue;
+
       const split = splitAffiliationStore(prefix);
+
+      // 너무 긴 UI 문자열은 매장으로 보지 않는다.
+      if((split.storeName||'').length > 30) continue;
 
       const student = normalizeStudentRecord({
         name,
         affiliation: split.affiliation,
         storeName: split.storeName,
+        durationMin:'',
         score:null,
         reason:''
       });
 
-      // 같은 화면 또는 여러 캡처에서 같은 이름이 반복되면 1명만 남긴다.
       const key = canonicalName(student.name);
       if(!key) continue;
 
@@ -623,8 +712,9 @@ console.log('attendance-app V4 - local browser OCR - no API key required');
         byName.set(key, student);
       }else{
         const old = byName.get(key);
-        old.affiliation = old.affiliation || student.affiliation;
-        old.storeName = old.storeName || student.storeName;
+        // 더 구체적인 매장/소속 값 우선
+        if(!old.affiliation && student.affiliation) old.affiliation = student.affiliation;
+        if(!old.storeName && student.storeName) old.storeName = student.storeName;
         byName.set(key, old);
       }
     }
@@ -640,7 +730,7 @@ console.log('attendance-app V4 - local browser OCR - no API key required');
     const dataUrl = `data:${mediaType || 'image/jpeg'};base64,${base64}`;
     let result;
     try{
-      result = await Tesseract.recognize(dataUrl, 'kor+eng', {
+      const worker = await Tesseract.createWorker('kor+eng', 1, {
         logger: m=>{
           if(typeof onProgress === 'function'){
             const pct = typeof m.progress === 'number' ? Math.round(m.progress * 100) : null;
@@ -649,12 +739,19 @@ console.log('attendance-app V4 - local browser OCR - no API key required');
               'initializing tesseract':'문자인식 엔진 초기화 중',
               'loading language traineddata':'한글 인식 데이터 불러오는 중',
               'initializing api':'한글 인식 준비 중',
-              'recognizing text':'사진의 글자 읽는 중'
+              'recognizing text':'매장명과 이름을 읽는 중'
             };
             onProgress(statusMap[m.status] || '사진 분석 중', pct);
           }
         }
       });
+      await worker.setParameters({
+        preserve_interword_spaces: '1',
+        user_defined_dpi: '300',
+        tessedit_pageseg_mode: '6'
+      });
+      result = await worker.recognize(dataUrl);
+      await worker.terminate();
     }catch(e){
       console.error('Browser OCR error:', e);
       throw new Error('사진 문자인식에 실패했습니다. 인터넷 연결을 확인하고, 가능하면 화면 캡처 이미지를 다시 올려주세요.');
@@ -687,46 +784,116 @@ console.log('attendance-app V4 - local browser OCR - no API key required');
   // blob: URL은 이 앱이 실행되는 샌드박스에서 막힐 수 있어, FileReader로 읽은 data: URL만 사용한다.
   function normalizeImage(file){
     const isHeic = /heic|heif/i.test(file.type||'') || /\.(heic|heif)$/i.test(file.name||'');
+
     return new Promise((resolve, reject)=>{
       const reader = new FileReader();
       reader.onerror = ()=> reject(new Error('사진 파일을 읽는 중 문제가 발생했습니다. 다른 사진으로 다시 시도해주세요.'));
+
       reader.onload = ()=>{
         const rawDataUrl = reader.result;
         const img = new Image();
+
         img.onload = ()=>{
           try{
-            const MAX_DIM = 1600;
-            let { width, height } = img;
+            const MAX_DIM = 2800;
+            const MIN_DIM = 1800;
+
+            let width = img.width;
+            let height = img.height;
+
             if(width===0 || height===0){
               reject(new Error('사진 크기를 읽을 수 없습니다. 다른 사진으로 다시 시도해주세요.'));
               return;
             }
-            if(width > MAX_DIM || height > MAX_DIM){
-              const ratio = Math.min(MAX_DIM/width, MAX_DIM/height);
-              width = Math.round(width*ratio);
-              height = Math.round(height*ratio);
+
+            // 작은 캡처는 확대, 너무 큰 사진은 축소
+            let ratio = 1;
+            const longest = Math.max(width,height);
+            if(longest < MIN_DIM){
+              ratio = MIN_DIM / longest;
+            }else if(longest > MAX_DIM){
+              ratio = MAX_DIM / longest;
             }
+
+            width = Math.round(width * ratio);
+            height = Math.round(height * ratio);
+
+            // 원본 미리보기
+            const previewCanvas = document.createElement('canvas');
+            previewCanvas.width = width;
+            previewCanvas.height = height;
+            const pctx = previewCanvas.getContext('2d', {willReadFrequently:true});
+            pctx.fillStyle = '#fff';
+            pctx.fillRect(0,0,width,height);
+            pctx.drawImage(img, 0, 0, width, height);
+            const previewDataUrl = previewCanvas.toDataURL('image/jpeg', 0.92);
+
+            // OCR 전용 캔버스
             const canvas = document.createElement('canvas');
-            canvas.width = width; canvas.height = height;
-            const ctx = canvas.getContext('2d');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d', {willReadFrequently:true});
             ctx.fillStyle = '#fff';
             ctx.fillRect(0,0,width,height);
             ctx.drawImage(img, 0, 0, width, height);
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.87);
-            resolve({ base64: dataUrl.split(',')[1], mediaType: 'image/jpeg', dataUrl });
+
+            const imageData = ctx.getImageData(0,0,width,height);
+            const data = imageData.data;
+
+            // 전체 밝기 샘플로 다크 화면 여부 판단
+            let sum = 0;
+            let count = 0;
+            const step = Math.max(4, Math.floor((width*height)/80000));
+            for(let i=0;i<data.length;i+=4*step){
+              const gray = 0.299*data[i] + 0.587*data[i+1] + 0.114*data[i+2];
+              sum += gray;
+              count++;
+            }
+            const avg = count ? sum/count : 255;
+            const invert = avg < 115;
+
+            // grayscale + contrast 보정
+            for(let i=0;i<data.length;i+=4){
+              let gray = 0.299*data[i] + 0.587*data[i+1] + 0.114*data[i+2];
+              if(invert) gray = 255-gray;
+
+              // 중간 대비를 강하게 해 작은 한글 획을 살림
+              gray = Math.max(0, Math.min(255, (gray-128)*1.55 + 128));
+
+              // 거의 흰/검은 영역은 더 명확하게
+              if(gray > 225) gray = 255;
+              if(gray < 45) gray = 0;
+
+              data[i] = data[i+1] = data[i+2] = gray;
+            }
+            ctx.putImageData(imageData,0,0);
+
+            // PNG가 텍스트 OCR에 더 유리
+            const ocrDataUrl = canvas.toDataURL('image/png');
+
+            resolve({
+              base64: ocrDataUrl.split(',')[1],
+              mediaType:'image/png',
+              dataUrl: previewDataUrl
+            });
+
           }catch(e){
-            reject(new Error('사진을 처리하지 못했습니다. 다른 사진으로 다시 시도해주세요.'));
+            console.error(e);
+            reject(new Error('사진을 처리하지 못했습니다. 화면 캡처 이미지를 다시 사용해주세요.'));
           }
         };
+
         img.onerror = ()=>{
           if(isHeic){
-            reject(new Error('HEIC 형식 사진은 이 브라우저에서 열 수 없습니다. 아이폰 설정 > 카메라 > 형식을 "호환성 우선"으로 바꾸거나, 사진 갤러리에서 이미 저장된 사진(또는 스크린샷)을 선택해 다시 시도해주세요.'));
+            reject(new Error('HEIC 형식은 브라우저에서 바로 읽기 어렵습니다. 사진 대신 화면 캡처 이미지를 사용해주세요.'));
           }else{
             reject(new Error('사진을 불러오지 못했습니다. 다른 사진으로 다시 시도해주세요.'));
           }
         };
+
         img.src = rawDataUrl;
       };
+
       reader.readAsDataURL(file);
     });
   }
@@ -861,13 +1028,13 @@ console.log('attendance-app V4 - local browser OCR - no API key required');
 
       <label class="field-label">3. 교육생 정보 확인 (${draftStudents.length}명)</label>
       <div class="student-head-grid">
-        <div>소속</div><div>매장명</div><div>이름</div><div></div>
+        <div>소속</div><div>매장명</div><div>이름</div><div>참여 시간</div><div></div>
       </div>
       <div id="draft-list"></div>
 
       <button class="btn btn-outline btn-sm" id="add-row-btn" style="margin-top:4px;">+ 교육생 직접 추가</button>
       <div class="hint">
-        교육생은 <b>소속 / 매장명 / 이름</b>만 저장합니다. 같은 이름이 여러 번 인식되면 자동으로 1명으로 합칩니다.
+        교육생의 <b>소속 / 매장명 / 이름</b>은 사진에서 자동 인식합니다. 소속은 <b>동대구마케팅팀 → 동대구</b>처럼 지역명만 입력되고, <b>참여 시간(분)</b>은 직접 입력합니다. 같은 이름은 자동으로 1명으로 합칩니다.
       </div>
       <button class="btn btn-primary" id="save-draft-btn" style="margin-top:16px;">명단 저장하고 태도 입력하기</button>
     `;
@@ -876,7 +1043,7 @@ console.log('attendance-app V4 - local browser OCR - no API key required');
 
     document.getElementById('add-row-btn').onclick = ()=>{
       draftStudents.push(normalizeStudentRecord({
-        id:uid(), affiliation:'', storeName:'', name:'', score:null, reason:''
+        id:uid(), affiliation:'', storeName:'', name:'', durationMin:'', score:null, reason:''
       }));
       renderDraftRows();
     };
@@ -980,6 +1147,10 @@ console.log('attendance-app V4 - local browser OCR - no API key required');
             <span class="mini-label">이름</span>
             <input type="text" class="dn" value="${esc(s.name)}" placeholder="예: 김세현">
           </div>
+          <div class="mini-field student-duration-field">
+            <span class="mini-label">참여 시간(분)</span>
+            <input type="number" min="0" class="dd" value="${esc(s.durationMin||'')}" placeholder="예: 91">
+          </div>
           <button class="rm-btn" data-rm="${i}" title="삭제">✕</button>
         </div>
       `;
@@ -990,6 +1161,7 @@ console.log('attendance-app V4 - local browser OCR - no API key required');
       row.querySelector('.da').oninput = e=> draftStudents[i].affiliation = e.target.value;
       row.querySelector('.ds').oninput = e=> draftStudents[i].storeName = e.target.value;
       row.querySelector('.dn').oninput = e=> draftStudents[i].name = e.target.value;
+      row.querySelector('.dd').oninput = e=> draftStudents[i].durationMin = e.target.value === '' ? '' : Math.max(0, +e.target.value);
     });
 
     wrap.querySelectorAll('[data-rm]').forEach(btn=>{
@@ -1105,6 +1277,10 @@ console.log('attendance-app V4 - local browser OCR - no API key required');
               <input type="text" class="sc-store" value="${esc(st.storeName||'')}" placeholder="매장명">
             </div>
             <input type="text" class="sc-name-input" value="${esc(st.name||'')}" placeholder="이름" style="margin-top:6px;font-weight:800;">
+            <div style="display:flex;align-items:center;gap:6px;margin-top:6px;">
+              <input type="number" min="0" class="sc-duration" value="${esc(st.durationMin||'')}" placeholder="참여 시간">
+              <span style="font-size:12px;color:var(--sub);white-space:nowrap;">분</span>
+            </div>
           </div>
         </div>
         <div class="chip-row">
@@ -1136,6 +1312,9 @@ console.log('attendance-app V4 - local browser OCR - no API key required');
       card.querySelector('.sc-affil').oninput = e=>{ s.students[i].affiliation = e.target.value; };
       card.querySelector('.sc-store').oninput = e=>{ s.students[i].storeName = e.target.value; };
       card.querySelector('.sc-name-input').oninput = e=>{ s.students[i].name = e.target.value; };
+      card.querySelector('.sc-duration').oninput = e=>{
+        s.students[i].durationMin = e.target.value === '' ? '' : Math.max(0, +e.target.value);
+      };
     });
   }
 
@@ -1151,6 +1330,7 @@ console.log('attendance-app V4 - local browser OCR - no API key required');
         <td>${esc(st.affiliation||'')}</td>
         <td>${esc(st.storeName||'')}</td>
         <td>${esc(st.name||'')}</td>
+        <td>${esc(st.durationMin||'')}</td>
         <td>${st.score===null||st.score===undefined?'':esc(st.score)}</td>
         <td>${esc(st.reason||'')}</td>
       </tr>`;
@@ -1174,7 +1354,7 @@ th{font-weight:bold;background:#e9ecff}
 <br>
 <table>
 <thead><tr>
-<th>소속</th><th>매장명</th><th>이름</th><th>점수</th><th>사유</th>
+<th>소속</th><th>매장명</th><th>이름</th><th>참여 시간(분)</th><th>점수</th><th>사유</th>
 </tr></thead>
 <tbody>${rows}</tbody>
 </table>
@@ -1201,10 +1381,10 @@ th{font-weight:bold;background:#e9ecff}
     const s = currentSession;
     const fileBase = buildFileBase(s);
     const rows = [
-      ['소속','매장명','이름','점수','사유'],
+      ['소속','매장명','이름','참여 시간(분)','점수','사유'],
       ...s.students.map(raw=>{
         const st = normalizeStudentRecord(raw);
-        return [st.affiliation, st.storeName, st.name, st.score, st.reason];
+        return [st.affiliation, st.storeName, st.name, st.durationMin, st.score, st.reason];
       })
     ];
     const csv = '\uFEFF' + rows.map(r=>r.map(csvEscape).join(',')).join('\r\n');
@@ -1250,8 +1430,8 @@ th{font-weight:bold;background:#e9ecff}
     const SCALE = 2;
     const W = 760;
     const PAD = 26;
-    const colAffil = 120, colStore = 120, colName = 90, colScore = 50;
-    const colReason = W - PAD*2 - colAffil - colStore - colName - colScore;
+    const colAffil = 105, colStore = 105, colName = 85, colDuration = 70, colScore = 45;
+    const colReason = W - PAD*2 - colAffil - colStore - colName - colDuration - colScore;
     const lineH = 16;
     const rowPadV = 10;
     const headerH = 92;
@@ -1269,6 +1449,7 @@ th{font-weight:bold;background:#e9ecff}
         affiliation:st.affiliation||'-',
         storeName:st.storeName||'-',
         name:st.name||'',
+        durationTxt:st.durationMin!=='' && st.durationMin!==undefined ? String(st.durationMin)+'분' : '-',
         scoreTxt,
         reasonLines,
         rowH
@@ -1304,8 +1485,9 @@ th{font-weight:bold;background:#e9ecff}
     ctx.fillText('소속', PAD+10, y+20);
     ctx.fillText('매장명', PAD+colAffil+10, y+20);
     ctx.fillText('이름', PAD+colAffil+colStore+10, y+20);
-    ctx.fillText('점수', PAD+colAffil+colStore+colName+10, y+20);
-    ctx.fillText('사유', PAD+colAffil+colStore+colName+colScore+10, y+20);
+    ctx.fillText('참여', PAD+colAffil+colStore+colName+10, y+20);
+    ctx.fillText('점수', PAD+colAffil+colStore+colName+colDuration+10, y+20);
+    ctx.fillText('사유', PAD+colAffil+colStore+colName+colDuration+colScore+10, y+20);
     y += tableHeadH;
 
     rows.forEach((r,i)=>{
@@ -1320,12 +1502,13 @@ th{font-weight:bold;background:#e9ecff}
       ctx.font = '700 12.5px -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
       ctx.fillStyle = '#1F2430';
       ctx.fillText(r.name, PAD+colAffil+colStore+10, y+18);
-      ctx.fillText(r.scoreTxt, PAD+colAffil+colStore+colName+10, y+18);
+      ctx.fillText(r.durationTxt, PAD+colAffil+colStore+colName+10, y+18);
+      ctx.fillText(r.scoreTxt, PAD+colAffil+colStore+colName+colDuration+10, y+18);
 
       ctx.font = '500 11.5px -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
       ctx.fillStyle = '#374151';
       r.reasonLines.forEach((ln,li)=>
-        ctx.fillText(ln, PAD+colAffil+colStore+colName+colScore+10, y+18+li*lineH)
+        ctx.fillText(ln, PAD+colAffil+colStore+colName+colDuration+colScore+10, y+18+li*lineH)
       );
 
       ctx.strokeStyle = '#E7E9F5';
