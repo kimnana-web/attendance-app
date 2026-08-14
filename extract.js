@@ -1,166 +1,218 @@
-const PROMPT = `이 이미지는 Zoom 화상회의 종료 후 참가자 목록 화면입니다.
-화면에 보이는 모든 실제 교육생(호스트/강사 계정은 제외)을 아래 JSON 형식으로만 응답하세요.
-설명, 코드블록, 마크다운 없이 순수 JSON 객체 하나만 출력하세요.
+export const config = {
+  maxDuration: 30
+};
 
-같은 사람이 재접속 등으로 여러 번 나오면, 가장 정보가 온전한 한 줄로 합쳐서 한 명당 한 번만 포함하세요.
-참가/나간 시간이나 접속시간(분)이 화면에 없으면 빈 문자열로 두세요.
+const PROMPT = `이 이미지는 기업 교육 운영 시스템의 '차수별 학습자 정보' 화면 또는 교육 참가자 명단 화면입니다.
+화면에 실제로 표시된 정보를 정확히 읽어 아래 JSON 형식으로만 응답하세요.
+설명, 마크다운, 코드블록은 절대 출력하지 말고 JSON 객체 하나만 출력하세요.
 
-화면에 표시된 이름이 "다울 본점 민유량"처럼 소속(지점/매장명)과 사람 이름이 붙어 있으면,
-소속은 affiliation에, 사람 이름만 name에 분리해서 담으세요. 소속을 구분할 수 없으면 affiliation은 빈 문자열로 두세요.
+[가장 중요한 정확성 원칙]
+- 한글 이름과 매장명은 한 글자만 달라도 다른 정보입니다.
+- 비슷하게 생긴 자음/모음을 임의로 바꾸지 마세요.
+- 각 이름과 매장명을 화면과 글자 단위로 두 번 대조한 뒤 출력하세요.
+- 화면에 보이지 않는 내용을 추측해서 만들지 마세요.
+- 특히 김태현을 김타현처럼, 동성로직영점을 비슷한 다른 글자로 바꾸지 않도록 주의하세요.
+- 매장명은 축약/의역/교정하지 말고 '매장명' 열에 표시된 전체 글자를 그대로 옮기세요.
 
-화면 상단의 회의 주제/제목 텍스트에서 다음을 분리해서 읽어주세요. 확실하지 않으면 null로 두세요.
-- courseName: 교육과정명
-- session: 차수(숫자 문자열)
-- schedule: 진행 일정/날짜
+[차수별 학습자 정보 표가 있는 경우]
+오직 아래 표의 실제 학습자 데이터 행만 students에 넣으세요.
+- 소속명
+- 매장명
+- 이름
 
+아래는 학생 데이터가 아니므로 students에 절대 넣지 마세요.
+- 학습자 승인 현황
+- 신청/승인/취소·반려 인원
+- 출석현황
+- 출석인원/등록학습자/미등록학습자
+- 학습자직접등록/학습자엑셀등록/차수변경/승인/반려/삭제 버튼
+- NO/소속명/매장명/이름 같은 표 머리글
+
+[소속 affiliation]
+예:
+대구마케팅담당 > 동대구마케팅팀 > 상상대리점 → "동대구"
+대구마케팅담당 > 서대구마케팅팀 > 더블유대리점 → "서대구"
+대구마케팅담당 > 경북마케팅팀 > 중앙SK대리점 → "경북"
+
+규칙:
+1. '○○마케팅담당' 상위 조직은 버립니다.
+2. '○○마케팅팀'에서 '마케팅팀'만 제거한 지역명만 affiliation에 넣습니다.
+3. 뒤의 대리점명은 affiliation에 넣지 않습니다.
+4. 확실하지 않으면 빈 문자열로 둡니다.
+
+[매장명 storeName]
+- 표에 '매장명' 열이 있으면 반드시 그 셀의 문자열을 사용합니다.
+- 소속명 열 마지막에 나오는 대리점명을 매장명 대신 쓰지 마세요.
+- 예: 매장명 열에 '더블유대리점 동성로직영점'이면 storeName도 정확히 '더블유대리점 동성로직영점'입니다.
+- 화면에 보이는 글자와 띄어쓰기를 최대한 그대로 유지합니다.
+
+[이름 name]
+- 반드시 '이름' 열의 실제 사람 이름을 사용합니다.
+- 한글 이름을 글자 단위로 두 번 확인합니다.
+- 다른 열이나 현황 영역의 글자를 이름으로 넣지 않습니다.
+
+[교육과정 정보]
+화면에서 보이는 경우에만 추출하고 불확실하면 null:
+- courseName: 과정명
+- session: 차수 숫자만. 예: 32차수 → "32"
+- schedule: 날짜. '2026.08.20 ~ 2026.08.20'이면 "2026.08.20"; 범위이면 시작일
+- instructor: 담당 강사 이름. 화면에 없으면 null
+
+[참여 시간]
+- durationMin은 자동으로 추출하지 말고 항상 "".
+- joinTime과 leaveTime도 항상 "".
+
+[중복]
+- affiliation + storeName + name이 같은 동일 교육생은 한 번만 포함합니다.
+
+반드시 아래 JSON 구조만 출력하세요.
 {
-  "courseName": "교육과정명 (없으면 null)",
-  "session": "차수 (없으면 null)",
-  "schedule": "진행 일정/날짜 (없으면 null)",
+  "courseName": null,
+  "session": null,
+  "schedule": null,
+  "instructor": null,
   "students": [
-    {"name": "이름", "affiliation": "소속(지점/매장명)", "joinTime": "", "leaveTime": "", "durationMin": ""}
+    {
+      "affiliation": "동대구",
+      "storeName": "화면의 매장명 그대로",
+      "name": "화면의 이름 그대로",
+      "joinTime": "",
+      "leaveTime": "",
+      "durationMin": ""
+    }
   ]
 }`;
 
-export const maxDuration = 60;
-
-function json(data, status = 200) {
-  return Response.json(data, {
-    status,
-    headers: {
-      'Cache-Control': 'no-store, max-age=0',
-      'X-Content-Type-Options': 'nosniff',
-    },
-  });
+function sendJson(res, status, body){
+  res.status(status);
+  res.setHeader('Content-Type','application/json; charset=utf-8');
+  res.setHeader('Cache-Control','no-store');
+  res.send(JSON.stringify(body));
 }
 
-function extractJsonObject(text) {
-  const cleaned = String(text || '')
-    .replace(/^```(?:json)?\s*/i, '')
-    .replace(/\s*```$/i, '')
-    .trim();
-  const start = cleaned.indexOf('{');
-  const end = cleaned.lastIndexOf('}');
-  if (start === -1 || end === -1 || end < start) {
-    throw new Error('응답에서 JSON 인식 결과를 찾지 못했습니다.');
+export default async function handler(req, res){
+  if(req.method !== 'POST'){
+    return sendJson(res,405,{code:'METHOD_NOT_ALLOWED',message:'POST 요청만 사용할 수 있습니다.'});
   }
-  return JSON.parse(cleaned.slice(start, end + 1));
-}
 
-function friendlyGatewayError(status, message) {
-  const m = String(message || '');
-  if (status === 401 || /unauth|oidc|authentication|token/i.test(m)) {
-    return 'Vercel AI 인증에 실패했습니다. 프로젝트의 OIDC 설정을 확인한 뒤 다시 배포해주세요.';
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if(!apiKey){
+    return sendJson(res,503,{
+      code:'SERVER_API_KEY_MISSING',
+      message:'Vercel 환경 변수 ANTHROPIC_API_KEY가 등록되지 않았습니다.'
+    });
   }
-  if (status === 402 || /credit|billing|payment|spend/i.test(m)) {
-    return 'Vercel AI Gateway 사용 한도 또는 결제 설정을 확인해주세요.';
-  }
-  if (status === 429 || /rate limit/i.test(m)) {
-    return 'AI 요청이 잠시 많습니다. 잠시 후 다시 시도해주세요.';
-  }
-  if (status >= 500) {
-    return 'AI 서버가 일시적으로 응답하지 않습니다. 잠시 후 다시 시도해주세요.';
-  }
-  return m || `AI 요청이 실패했습니다. (${status})`;
-}
 
-export default {
-  async fetch(request) {
-    if (request.method !== 'POST') {
-      return json({ error: 'POST 요청만 지원합니다.' }, 405);
+  try{
+    const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+    const base64 = body.base64;
+    const mediaType = body.mediaType || 'image/jpeg';
+
+    if(!base64){
+      return sendJson(res,400,{code:'IMAGE_MISSING',message:'이미지 데이터가 없습니다.'});
     }
 
-    // Vercel 배포에서는 OIDC 토큰이 자동 제공됩니다.
-    // AI_GATEWAY_API_KEY가 있으면 그 키를 우선 사용하고, 없으면 OIDC를 사용합니다.
-    const gatewayToken = process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN;
-    if (!gatewayToken) {
-      return json({
-        error: 'Vercel AI 인증 정보가 없습니다. 프로젝트 설정에서 OIDC를 활성화한 뒤 재배포해주세요.'
-      }, 503);
+    const r = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key':apiKey,
+        'anthropic-version':'2023-06-01'
+      },
+      body:JSON.stringify({
+        model:'claude-sonnet-5',
+        max_tokens:3500,
+        thinking:{type:'disabled'},
+        messages:[{
+          role:'user',
+          content:[
+            {
+              type:'image',
+              source:{
+                type:'base64',
+                media_type:mediaType,
+                data:base64
+              }
+            },
+            {type:'text',text:PROMPT}
+          ]
+        }]
+      })
+    });
+
+    let raw;
+    try{
+      raw = await r.json();
+    }catch(e){
+      return sendJson(res,502,{code:'AI_BAD_RESPONSE',message:'AI 응답을 읽지 못했습니다.'});
     }
 
-    let body;
-    try {
-      body = await request.json();
-    } catch {
-      return json({ error: '요청 형식이 올바르지 않습니다.' }, 400);
-    }
-
-    const base64 = typeof body?.base64 === 'string' ? body.base64 : '';
-    const mediaType = typeof body?.mediaType === 'string' ? body.mediaType : 'image/jpeg';
-
-    if (!base64) {
-      return json({ error: '이미지 데이터가 없습니다.' }, 400);
-    }
-    if (base64.length > 4_000_000) {
-      return json({ error: '이미지가 너무 큽니다. 더 작은 캡처 이미지로 다시 시도해주세요.' }, 413);
-    }
-    if (!/^image\/(jpeg|png|webp|gif)$/.test(mediaType)) {
-      return json({ error: '지원하지 않는 이미지 형식입니다.' }, 415);
-    }
-
-    const model = process.env.AI_MODEL || 'anthropic/claude-sonnet-5';
-
-    let upstream;
-    try {
-      upstream = await fetch('https://ai-gateway.vercel.sh/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${gatewayToken}`,
-          'Content-Type': 'application/json',
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model,
-          max_tokens: 2200,
-          thinking: { type: 'disabled' },
-          messages: [{
-            role: 'user',
-            content: [
-              {
-                type: 'image',
-                source: {
-                  type: 'base64',
-                  media_type: mediaType,
-                  data: base64,
-                },
-              },
-              { type: 'text', text: PROMPT },
-            ],
-          }],
-        }),
+    if(!r.ok){
+      return sendJson(res,r.status,{
+        code:'AI_ERROR',
+        message:raw?.error?.message || `AI 요청 실패 (${r.status})`
       });
-    } catch (error) {
-      console.error('AI Gateway network error:', error);
-      return json({ error: 'Vercel AI Gateway에 연결하지 못했습니다.' }, 502);
     }
 
-    let data;
-    try {
-      data = await upstream.json();
-    } catch {
-      return json({ error: 'AI 서버의 응답을 읽지 못했습니다.' }, 502);
+    const block = (raw.content||[]).find(x=>x.type==='text');
+    const text = block?.text || '';
+
+    const st = text.indexOf('{');
+    const en = text.lastIndexOf('}');
+
+    if(st<0 || en<st){
+      return sendJson(res,502,{code:'JSON_NOT_FOUND',message:'AI 응답에서 학습자 정보를 찾지 못했습니다.'});
     }
 
-    if (!upstream.ok) {
-      const raw = data?.error?.message || data?.message || `AI 요청 실패 (${upstream.status})`;
-      console.error('AI Gateway error:', upstream.status, raw);
-      return json({ error: friendlyGatewayError(upstream.status, raw), detail: raw }, upstream.status >= 500 ? 502 : 400);
+    let parsed;
+    try{
+      parsed = JSON.parse(text.slice(st,en+1));
+    }catch(e){
+      return sendJson(res,502,{code:'JSON_PARSE_ERROR',message:'AI가 반환한 학습자 정보 형식을 읽지 못했습니다.'});
     }
 
-    const textBlock = (data.content || []).find((block) => block.type === 'text');
-    if (!textBlock?.text) {
-      return json({ error: 'AI가 빈 응답을 반환했습니다.' }, 502);
+    const seen = new Set();
+    const students = [];
+
+    for(const x of (parsed.students||[])){
+      const affiliation = String(x.affiliation||'').trim();
+      const storeName = String(x.storeName||'').trim();
+      const name = String(x.name||'').trim();
+
+      if(!name) continue;
+
+      const uiText = `${affiliation} ${storeName} ${name}`;
+      if(/학습자\s*승인|출석현황|신청\s*:|승인\s*:|취소|반려|등록학습자|미등록학습자|학습자직접등록|학습자엑셀등록|차수변경/.test(uiText)){
+        continue;
+      }
+
+      const key = `${affiliation}|${storeName}|${name}`.replace(/\s+/g,'');
+      if(seen.has(key)) continue;
+      seen.add(key);
+
+      students.push({
+        affiliation,
+        storeName,
+        name,
+        joinTime:'',
+        leaveTime:'',
+        durationMin:''
+      });
     }
 
-    try {
-      const parsed = extractJsonObject(textBlock.text);
-      if (!Array.isArray(parsed.students)) parsed.students = [];
-      parsed.students = parsed.students.filter(s => s && String(s.name || '').trim());
-      return json(parsed, 200);
-    } catch (error) {
-      console.error('AI response parse error:', error, textBlock.text);
-      return json({ error: 'AI 인식 결과를 정리하지 못했습니다. 같은 사진으로 한 번 더 시도해주세요.' }, 502);
-    }
-  },
-};
+    return sendJson(res,200,{
+      courseName:parsed.courseName ?? null,
+      session:parsed.session ?? null,
+      schedule:parsed.schedule ?? null,
+      instructor:parsed.instructor ?? null,
+      students
+    });
+
+  }catch(err){
+    console.error(err);
+    return sendJson(res,500,{
+      code:'SERVER_ERROR',
+      message:err?.message || '사진 인식 중 서버 오류가 발생했습니다.'
+    });
+  }
+}

@@ -20,8 +20,6 @@
     --shadow: 0 1px 2px rgba(30,27,75,.04), 0 8px 24px rgba(79,70,229,.07);
   }
   *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;min-height:100%;background:#F3F4FD;}
-  body{min-height:100vh;}
   #app-root{
     font-family:-apple-system,BlinkMacSystemFont,'Malgun Gothic','Apple SD Gothic Neo','Segoe UI',sans-serif;
     background:radial-gradient(circle at 12% 0%, #EEF0FF 0%, var(--paper) 42%);
@@ -33,10 +31,10 @@
   }
   .shell{max-width:520px;margin:0 auto;padding:18px 16px 60px;}
   .topbar{
-    display:flex;align-items:flex-start;justify-content:space-between;
+    display:flex;align-items:flex-start;justify-content:space-between;gap:8px;
     padding:14px 4px 18px;
   }
-  .brand{display:flex;align-items:flex-start;gap:10px;}
+  .brand{display:flex;align-items:flex-start;gap:10px;min-width:0;}
   .brand-mark{
     width:34px;height:34px;border-radius:11px;
     background:linear-gradient(135deg,#6366F1,#4F46E5 55%,#4338CA);
@@ -64,7 +62,7 @@
   .btn-amber{background:linear-gradient(135deg,#FBBF24,#F59E0B);color:#3F2D02;box-shadow:0 6px 16px rgba(245,158,11,.28);}
   .btn-teal{background:var(--teal);color:#fff;}
   .btn-outline{background:#fff;color:var(--navy);border:1.5px solid var(--line);}
-  .btn-ghost{background:transparent;color:var(--sub);font-weight:600;}
+  .btn-ghost{background:transparent;color:var(--sub);font-weight:600;flex-shrink:0;}
   .btn-danger-ghost{background:transparent;color:var(--red);font-weight:600;font-size:12px;padding:4px 8px;width:auto;}
   .btn-sm{padding:8px 12px;font-size:12.5px;width:auto;}
   .row{display:flex;gap:8px;}
@@ -115,72 +113,13 @@
   .preview-img{width:100%;border-radius:12px;border:1px solid var(--line);margin-bottom:12px;}
   .student-row{
     border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;
-    display:flex;gap:8px;align-items:center;background:#FAFAFF;
+    background:#FAFAFF;
   }
-  .student-row input{flex:1;}
-  .student-row.triplet{
-    display:grid;
-    grid-template-columns:1fr 1fr 1fr 105px 34px;
-    gap:7px;
-    align-items:end;
-    padding:11px;
-  }
-  .mini-field{min-width:0;}
-  input.ocr-low{
-    background:#FFF8DB;
-    border-color:#E7B93F;
-  }
-  .ocr-warning{
-    font-size:10.5px;
-    color:#A16207;
-    font-weight:700;
-    margin-top:3px;
-    line-height:1.35;
-  }
-  .source-check-note{
-    margin:10px 0 2px;
-    padding:9px 10px;
-    border-radius:10px;
-    background:#F8FAFC;
-    border:1px solid #E2E8F0;
-    font-size:11px;
-    line-height:1.45;
-    color:#475569;
-  }
-  .mini-label{
-    display:block;
-    font-size:10.5px;
-    font-weight:800;
-    color:var(--sub);
-    margin:0 0 4px 2px;
-  }
-  .student-row.triplet input{
-    width:100%;
-    min-width:0;
-    padding:9px 8px;
-    font-size:13px;
-  }
-  .student-head-grid{
-    display:grid;
-    grid-template-columns:1fr 1fr 1fr 105px 34px;
-    gap:7px;
-    padding:0 11px 6px;
-    color:var(--sub);
-    font-size:10.5px;
-    font-weight:800;
-  }
-  @media(max-width:470px){
-    .student-row.triplet{
-      grid-template-columns:1fr 1fr 34px;
-    }
-    .student-row.triplet .student-name-field{
-      grid-column:1 / 3;
-    }
-    .student-row.triplet .student-duration-field{
-      grid-column:1 / 3;
-    }
-    .student-head-grid{display:none;}
-  }
+  .student-row-top{display:flex;gap:8px;align-items:center;}
+  .student-row-top input{flex:1;font-weight:700;}
+  .student-row-bottom{display:flex;gap:6px;margin-top:8px;}
+  .student-row-bottom input{flex:1;min-width:0;font-size:12.5px;padding:8px 9px;}
+  .student-row-bottom input:last-child{flex:0 0 52px;text-align:center;}
   .rm-btn{
     width:28px;height:28px;border-radius:9px;border:none;background:#FEE2E2;
     color:var(--red);font-weight:800;cursor:pointer;flex-shrink:0;
@@ -197,20 +136,21 @@
     box-shadow:0 1px 2px rgba(30,27,75,.03);
   }
   .score-card.filled{border-color:#A7F3D0;background:#F5FEFA;}
-  .sc-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px;}
+  .sc-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;}
   .sc-name{font-size:14.5px;font-weight:800;color:var(--navy-deep);}
-  .sc-affil{
-    margin-top:3px;width:100%;border:none;border-bottom:1px dashed var(--line);
-    padding:2px 0;font-size:11.5px;color:var(--sub);background:transparent;border-radius:0;
+  .sc-org-row{display:flex;gap:8px;margin-bottom:10px;}
+  .sc-affil, .sc-store{
+    flex:1;min-width:0;border:none;border-bottom:1px dashed var(--line);
+    padding:3px 0;font-size:12px;color:var(--sub);background:transparent;border-radius:0;
   }
-  .sc-affil:focus{outline:none;border-bottom-color:var(--navy);}
-  .sc-time{font-size:11px;color:var(--sub);white-space:nowrap;flex-shrink:0;padding-top:2px;}
-  .chip-row{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;}
+  .sc-affil:focus, .sc-store:focus{outline:none;border-bottom-color:var(--navy);}
+  .sc-time{font-size:11px;color:var(--sub);white-space:nowrap;flex-shrink:0;}
+  .chip-row{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0;}
   .chip{
-    font-size:11.5px;font-weight:700;padding:6px 10px;border-radius:20px;
-    border:1.5px solid var(--line);background:#fff;cursor:pointer;color:var(--ink);
+    font-size:11px;font-weight:600;padding:5px 9px;border-radius:20px;
+    border:1px solid var(--line);background:#FAFAFF;cursor:pointer;color:var(--sub);
   }
-  .chip.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+  .chip.active{background:var(--navy);color:#fff;border-color:var(--navy);font-weight:700;}
   .score-input-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
   .score-input-row input{width:70px;flex:none;text-align:center;font-weight:800;}
   .score-input-row span{font-size:12px;color:var(--sub);font-weight:600;}
@@ -233,17 +173,15 @@
 </style>
 </head>
 <body>
-<div style="position:fixed;right:10px;bottom:10px;z-index:99999;background:#111827;color:#fff;padding:7px 10px;border-radius:999px;font:700 11px/1.2 -apple-system,BlinkMacSystemFont,'Malgun Gothic',sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.18);">V9 · 원본화질 보존 · 오타확인 강화</div>
+<div style="position:fixed;right:10px;bottom:10px;z-index:99999;background:#111827;color:#fff;padding:7px 10px;border-radius:999px;font:700 11px/1.2 -apple-system,BlinkMacSystemFont,'Malgun Gothic',sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.18);">V10 · Claude Vision 정밀인식</div>
 
 <div id="app-root">
   <div class="shell" id="shell"></div>
 </div>
 
-<!-- 서버 API 없이 브라우저 안에서 OCR 실행 -->
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <script>
-console.log('attendance-app V9 - original quality preserved + OCR disagreement review');
 (function(){
   try{ document.title = '천하무적동부교육팀 교육생 만족도 체크'; }catch(e){}
   const shell = document.getElementById('shell');
@@ -260,16 +198,30 @@ console.log('attendance-app V9 - original quality preserved + OCR disagreement r
   ];
 
   // ---------- storage helpers ----------
-  // 공개 웹 배포 버전: 기록은 각 사용자의 브라우저 localStorage에 저장됩니다.
-  // 따라서 같은 URL을 사용해도 기기/브라우저별 기록은 서로 섞이지 않습니다.
+  // Claude 아티팩트 안에서는 window.storage(클라우드 저장)를 쓰고,
+  // Vercel/Netlify 등 독립 배포 환경에서는 자동으로 localStorage(이 브라우저 안에만 저장)로 전환된다.
+  const HAS_CLAUDE_STORAGE = (typeof window !== 'undefined') && !!window.storage && typeof window.storage.get === 'function';
+
   async function kvGet(key){
+    if(HAS_CLAUDE_STORAGE){
+      try{ const r = await window.storage.get(key, false); return r ? r.value : null; }
+      catch(e){ return null; }
+    }
     try{ return window.localStorage.getItem(key); }catch(e){ return null; }
   }
   async function kvSet(key, value){
+    if(HAS_CLAUDE_STORAGE){
+      try{ const r = await window.storage.set(key, value, false); return !!r; }
+      catch(e){ console.error('kvSet fail', e); return false; }
+    }
     try{ window.localStorage.setItem(key, value); return true; }
     catch(e){ console.error('kvSet fail', e); return false; }
   }
   async function kvDelete(key){
+    if(HAS_CLAUDE_STORAGE){
+      try{ await window.storage.delete(key, false); }catch(e){}
+      return;
+    }
     try{ window.localStorage.removeItem(key); }catch(e){}
   }
 
@@ -286,10 +238,7 @@ console.log('attendance-app V9 - original quality preserved + OCR disagreement r
   async function getSession(id){
     try{
       const v = await kvGet('session:'+id);
-      if(!v) return null;
-      const s = JSON.parse(v);
-      s.students = (s.students||[]).map(normalizeStudentRecord);
-      return s;
+      return v ? JSON.parse(v) : null;
     }catch(e){ return null; }
   }
   async function saveSession(sess){
@@ -318,7 +267,6 @@ console.log('attendance-app V9 - original quality preserved + OCR disagreement r
     }catch(e){ console.error('delete fail', e); }
   }
 
-
   function canonical(v){
     return String(v||'')
       .toLowerCase()
@@ -327,243 +275,71 @@ console.log('attendance-app V9 - original quality preserved + OCR disagreement r
       .trim();
   }
 
-  function canonicalName(v){
-    return String(v||'').replace(/[^가-힣A-Za-z]/g,'').toLowerCase();
-  }
-
-  function canonicalDate(v){
-    return String(v||'').replace(/[^\d]/g,'');
-  }
-
-  function sessionKey(courseName, session, date){
-    return [canonical(courseName), canonical(session), canonicalDate(date)].join('|');
-  }
-
-  // 기존 구버전의 "소속" 한 칸에 "대리점 + 매장명"이 함께 들어 있던 데이터를
-  // 새 구조(소속/매장명)로 최대한 안전하게 분리한다.
-  function extractMarketingRegion(raw){
-    raw = String(raw || '')
-      .replace(/[|•●■□◆◇▶►※]/g,' ')
-      .replace(/\s+/g,' ')
-      .trim();
-
-    if(!raw) return '';
-
-    const compact = raw.replace(/\s+/g,'');
-
-    // 실제 화면 예:
-    // 대구마케팅담당 > 동대구마케팅팀 > 상상대리점
-    // => 동대구
-    //
-    // OCR이 '마케팅팀' 일부를 놓쳐도 지역명이 남아 있으면 잡을 수 있도록
-    // 구체적인 지역 키워드를 먼저 검사한다.
-    const priorityRegions = [
-      '동대구','서대구','경북','경남','부산','울산',
-      '동부산','서부산','북부산','남부산',
-      '포항','구미','경주','안동'
-    ];
-
-    for(const region of priorityRegions){
-      if(compact.includes(region + '마케팅팀')) return region;
-    }
-
-    // '팀' 글자가 누락된 OCR도 허용
-    for(const region of priorityRegions){
-      if(compact.includes(region + '마케팅')) return region;
-    }
-
-    // 일반 규칙: ○○마케팅팀에서 ○○만 추출
-    const teamMatches = [...compact.matchAll(/([가-힣]{2,10})마케팅팀/g)]
-      .map(m => (m[1] || '').trim())
-      .filter(Boolean);
-
-    if(teamMatches.length >= 2) return teamMatches[1];
-    if(teamMatches.length === 1) return teamMatches[0];
-
-    // 첫 번째 '대구마케팅담당'은 지역 소속으로 쓰지 않고
-    // 두 번째 마케팅 조직을 우선
-    const marketingMatches = [...compact.matchAll(/([가-힣]{2,10})마케팅(?:팀|담당)?/g)]
-      .map(m => (m[1] || '').trim())
-      .filter(Boolean);
-
-    if(marketingMatches.length >= 2) return marketingMatches[1];
-
-    return '';
-  }
-
-  function splitAffiliationStore(raw){
-    raw = String(raw||'')
-      .replace(/[|•●■□◆◇▶►※]/g,' ')
-      .replace(/\s+/g,' ')
-      .trim();
-
-    if(!raw) return {affiliation:'', storeName:''};
-
-    // 소속은 '○○마케팅팀'에서 지역명만 가져온다.
-    // 한 줄에 마케팅팀 값이 2개라면 두 번째 값을 우선 사용한다.
-    const marketingRegion = extractMarketingRegion(raw);
-
-    // 매장명 판별용으로 '○○마케팅팀' 문자열은 제거
-    let storeSource = raw.replace(/[가-힣]{2,10}\s*마케팅팀/g,' ').replace(/\s+/g,' ').trim();
-
-    // "레이스대리점율하점"처럼 붙어서 인식된 경우
-    const dealerAttached = storeSource.match(/^(.+?대리점)\s*(.+)$/);
-    if(dealerAttached){
-      const rest = dealerAttached[2].trim();
-      if(rest && /(점|본점|지점|센터|매장|스토어|플라자)$/.test(rest)){
-        return {
-          affiliation: marketingRegion,
-          storeName: rest
-        };
-      }
-    }
-
-    const tokens = storeSource.split(' ').filter(Boolean);
-    const last = tokens[tokens.length-1] || '';
-    const storePattern = /(점|본점|지점|직영점|센터|매장|스토어|플라자)$/;
-
-    if(tokens.length >= 2 && storePattern.test(last)){
-      return {
-        affiliation: marketingRegion,
-        storeName: last.trim()
-      };
-    }
-
-    if(tokens.length === 1 && storePattern.test(storeSource)){
-      return {
-        affiliation: marketingRegion,
-        storeName: storeSource
-      };
-    }
-
-    // 매장명이 애매하더라도 소속 지역은 마케팅팀 값에서 정확히 분리
-    return {
-      affiliation: marketingRegion,
-      storeName: storeSource
-    };
-  }
-
-  function normalizeStudentRecord(st){
-    st = st || {};
-    const rawAffiliation = String(st.organization || st.affiliationOrg || st.affiliation || '').trim();
-    const rawStore = String(st.storeName || '').trim();
-
-    const combinedForParsing = [rawAffiliation, rawStore].filter(Boolean).join(' ');
-    const split = splitAffiliationStore(combinedForParsing);
-    const directRegion = extractMarketingRegion(rawAffiliation);
-
-    return {
-      id: st.id || uid(),
-      affiliation: String(directRegion || split.affiliation || '').trim(),
-      storeName: String(rawStore || split.storeName || '').trim(),
-      name: String(st.name || '').trim(),
-      score: st.score===undefined ? null : st.score,
-      reason: st.reason || '',
-      joinTime: st.joinTime || '',
-      leaveTime: st.leaveTime || '',
-      durationMin: st.durationMin || '',
-      affiliationConfidence: st.affiliationConfidence===undefined ? null : Number(st.affiliationConfidence),
-      storeConfidence: st.storeConfidence===undefined ? null : Number(st.storeConfidence),
-      nameConfidence: st.nameConfidence===undefined ? null : Number(st.nameConfidence),
-      ocrConfidence: st.ocrConfidence===undefined ? null : Number(st.ocrConfidence),
-      storeNeedsReview: !!st.storeNeedsReview,
-      nameNeedsReview: !!st.nameNeedsReview,
-      storeCandidates: Array.isArray(st.storeCandidates) ? st.storeCandidates : [],
-      nameCandidates: Array.isArray(st.nameCandidates) ? st.nameCandidates : []
-    };
+  function studentKey(st){
+    return [
+      canonical(st.affiliation),
+      canonical(st.storeName),
+      canonical(st.name)
+    ].join('|');
   }
 
   function mergeStudents(baseStudents, newStudents){
-    const byName = new Map();
+    const map = new Map();
 
-    const put = (raw, preferExisting)=>{
-      const st = normalizeStudentRecord(raw);
-      const key = canonicalName(st.name);
-      if(!key) return;
+    for(const raw of [...(baseStudents||[]), ...(newStudents||[])]){
+      const st = {
+        id:raw.id || uid(),
+        name:String(raw.name||'').trim(),
+        affiliation:String(raw.affiliation||'').trim(),
+        storeName:String(raw.storeName||'').trim(),
+        joinTime:'',
+        leaveTime:'',
+        durationMin:raw.durationMin||'',
+        score:raw.score===undefined ? null : raw.score,
+        reason:raw.reason||''
+      };
 
-      if(!byName.has(key)){
-        byName.set(key, st);
-        return;
+      if(!st.name) continue;
+
+      let key = studentKey(st);
+      if(!st.affiliation){
+        key = `|${canonical(st.storeName)}|${canonical(st.name)}`;
       }
 
-      const old = byName.get(key);
-      const merged = {
-        ...old,
-        // 기존 강사 수정값/평가값을 우선 보존
-        affiliation: old.affiliation || st.affiliation,
-        storeName: old.storeName || st.storeName,
-        name: old.name || st.name,
-        score: (old.score!==null && old.score!==undefined && old.score!=='') ? old.score : st.score,
-        reason: old.reason || st.reason,
-        joinTime: old.joinTime || st.joinTime,
-        leaveTime: old.leaveTime || st.leaveTime,
-        durationMin: old.durationMin || st.durationMin
-      };
-      byName.set(key, merged);
-    };
+      if(!map.has(key)){
+        map.set(key, st);
+      }else{
+        const old = map.get(key);
+        old.affiliation = old.affiliation || st.affiliation;
+        old.storeName = old.storeName || st.storeName;
+        old.durationMin = old.durationMin || st.durationMin;
+        old.score = (old.score!==null && old.score!=='') ? old.score : st.score;
+        old.reason = old.reason || st.reason;
+      }
+    }
 
-    (baseStudents||[]).forEach(s=>put(s,true));
-    (newStudents||[]).forEach(s=>put(s,false));
-    return Array.from(byName.values());
+    return Array.from(map.values());
+  }
+
+  function sessionKey(courseName, session, date){
+    return [canonical(courseName), canonical(session), canonical(date)].join('|');
   }
 
   async function findExistingSession(courseName, session, date){
     const target = sessionKey(courseName, session, date);
     const idx = await getIndex();
-    for(const e of idx){
-      const s = await getSession(e.id);
-      if(!s) continue;
-      if(sessionKey(s.courseName || '', s.session || '', s.date || '') === target){
-        return s;
-      }
-    }
-    return null;
-  }
-
-  // 이전 버전에서 같은 과정/차수/날짜가 여러 번 저장된 경우 자동으로 한 건으로 합친다.
-  async function consolidateDuplicateSessions(){
-    const idx = await getIndex();
-    if(idx.length < 2) return;
-
-    const groups = new Map();
-    let changed = false;
 
     for(const entry of idx){
       const s = await getSession(entry.id);
       if(!s) continue;
 
-      s.students = mergeStudents([], s.students || []);
-      const key = sessionKey(s.courseName || '', s.session || '', s.date || '');
-
-      if(!groups.has(key)){
-        groups.set(key, s);
-      }else{
-        const keep = groups.get(key);
-        keep.students = mergeStudents(keep.students, s.students);
-        keep.instructor = keep.instructor || s.instructor || '';
-        await kvDelete('session:'+s.id);
-        changed = true;
+      if(sessionKey(s.courseName||'', s.session||'', s.date||'') === target){
+        return s;
       }
     }
 
-    if(!changed) return;
-
-    const newIdx = [];
-    for(const s of groups.values()){
-      await kvSet('session:'+s.id, JSON.stringify(s));
-      const scoredCount = s.students.filter(st=>st.score!==null && st.score!==undefined && st.score!=='').length;
-      newIdx.push({
-        id:s.id,
-        title:s.title,
-        date:s.date,
-        count:s.students.length,
-        scoredCount,
-        done:scoredCount===s.students.length && s.students.length>0
-      });
-    }
-    await saveIndex(newIdx);
+    return null;
   }
-
 
   function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
   function toast(msg){
@@ -576,830 +352,28 @@ console.log('attendance-app V9 - original quality preserved + OCR disagreement r
     return (s===undefined||s===null?'':String(s)).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
 
-  // ---------- 브라우저 OCR ----------
-  // 서버 API / API Key / Vercel Function을 사용하지 않습니다.
-  // 이미지 문자인식은 사용자의 브라우저에서 Tesseract.js로 실행됩니다.
-
-  const OCR_STOPWORDS = new Set([
-    '참가자','참가자목록','참가','목록','이름','회의','회의정보','대기실','호스트',
-    '교육강사','강사','나','초대','모두음소거','음소거','비디오','오디오',
-    '채팅','반응','화면공유','보안','기록','종료','나가기','검색','더보기',
-    'zoom','ZOOM','Zoom','SIA','sia'
-  ]);
-
-  function cleanOcrLine(line){
-    return String(line || '')
-      .replace(/[|•●■□◆◇▶►※]/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-  }
-
-  function normalizeKoreanName(raw){
-    let s = String(raw || '').trim();
-    s = s.replace(/의\s*(iPad|iPhone|Galaxy|Android|Phone|PC|Mac).*$/i, '');
-    s = s.replace(/[^\uAC00-\uD7A3]/g, '');
-    return /^[가-힣]{2,4}$/.test(s) ? s : '';
-  }
-
-  function looksLikeUiLine(line){
-    const compact = line.replace(/\s/g,'');
-    if(!compact) return true;
-    if(/^\d{1,2}[:.]\d{2}/.test(line)) return true;
-    if(/^\d+%?$/.test(compact)) return true;
-    for(const w of OCR_STOPWORDS){
-      if(compact === String(w).replace(/\s/g,'')) return true;
-    }
-    if(/참가자|대기실|모두\s*음소거|화면\s*공유|회의\s*종료|오디오|비디오/i.test(line)) return true;
-    return false;
-  }
-
-  function extractCourseMeta(text){
-    const lines = String(text || '')
-      .split(/\r?\n/)
-      .map(cleanOcrLine)
-      .filter(Boolean);
-
-    let courseName = '';
-    let session = '';
-    let schedule = '';
-    let instructor = '';
-
-    for(const line of lines){
-      if(!session){
-        const m = line.match(/(\d{1,3})\s*차수/);
-        if(m) session = m[1];
-      }
-
-      if(!schedule){
-        const d = line.match(/(20\d{2}[.\-/]\s*\d{1,2}[.\-/]\s*\d{1,2}|\d{1,2}[.\-/]\s*\d{1,2}[.\-/]\s*20\d{2})/);
-        if(d) schedule = d[1].replace(/\s/g,'');
-      }
-
-      if(!instructor){
-        let m = line.match(/(?:담당\s*)?강사(?:명)?\s*[:：\-]?\s*([가-힣]{2,4})/);
-        if(!m) m = line.match(/([가-힣]{2,4})\s*강사(?:님)?/);
-        if(m && !/교육|담당|진행|회의/.test(m[1])) instructor = m[1];
-      }
-    }
-
-    // 과정명은 참가자/교육생 줄을 절대 사용하지 않고,
-    // "과정/교육/BOOST/NPS/Btv/max" 등 과정명 성격이 있는 줄에서만 선택
-    const candidates = lines.filter(line =>
-      /교육|과정|BOOST|NPS|Btv|max|인증/i.test(line) &&
-      !/참가자|교육생|학습자|대기실|호스트|담당\s*강사/i.test(line) &&
-      !looksLikeUiLine(line)
-    );
-
-    if(candidates.length){
-      courseName = candidates[0]
-        .replace(/\d{1,3}\s*차수.*$/,'')
-        .replace(/20\d{2}[.\-/]\s*\d{1,2}[.\-/]\s*\d{1,2}.*$/,'')
-        .trim();
-    }
-
-    return {courseName, session, schedule, instructor};
-  }
-
-  function parseTsv(tsv){
-    if(!tsv) return [];
-    const lines = String(tsv).split(/\r?\n/);
-    if(lines.length < 2) return [];
-
-    const out = [];
-    for(let i=1;i<lines.length;i++){
-      if(!lines[i]) continue;
-      const cols = lines[i].split('\t');
-      if(cols.length < 12) continue;
-
-      const text = (cols.slice(11).join('\t') || '').trim();
-      if(!text) continue;
-
-      const left = Number(cols[6]) || 0;
-      const top = Number(cols[7]) || 0;
-      const width = Number(cols[8]) || 0;
-      const height = Number(cols[9]) || 0;
-      const conf = Number(cols[10]);
-
-      out.push({
-        text,
-        left,
-        top,
-        width,
-        height,
-        right:left+width,
-        bottom:top+height,
-        cx:left+width/2,
-        cy:top+height/2,
-        conf:Number.isFinite(conf) ? conf : -1
-      });
-    }
-    return out;
-  }
-
-  function compactOcrText(v){
-    return String(v||'')
-      .replace(/\s+/g,'')
-      .replace(/[|•●■□◆◇▶►※:：]/g,'')
-      .trim();
-  }
-
-  function findTableGeometry(words, imageWidth, imageHeight){
-    const findHeader = (label)=>{
-      const exact = words.filter(w => compactOcrText(w.text) === label);
-      if(exact.length) return exact[0];
-      const partial = words.filter(w => compactOcrText(w.text).includes(label));
-      return partial[0] || null;
-    };
-
-    const aff = findHeader('소속명');
-    const store = findHeader('매장명');
-    const name = findHeader('이름');
-
-    const found = [aff,store,name].filter(Boolean);
-
-    // 첨부 화면의 실제 열 비율과 일치하는 fallback
-    const affCenter = aff ? aff.cx : imageWidth * 0.322;
-    const storeCenter = store ? store.cx : imageWidth * 0.592;
-    const nameCenter = name ? name.cx : imageWidth * 0.862;
-
-    const affLeft = Math.max(0, affCenter - (storeCenter-affCenter)/2);
-    const affRight = (affCenter + storeCenter)/2;
-    const storeRight = (storeCenter + nameCenter)/2;
-
-    const headerBottom = found.length
-      ? Math.max(...found.map(w=>w.bottom)) + Math.max(5, imageHeight*0.004)
-      : imageHeight * 0.425;
-
-    return {
-      headerBottom,
-      affLeft,
-      affRight,
-      storeLeft:affRight,
-      storeRight,
-      nameLeft:storeRight,
-      nameRight:imageWidth
-    };
-  }
-
-  function clusterRowCenters(words, minY, maxY, minX, maxX, imageHeight){
-    const candidates = words
-      .filter(w =>
-        w.cy > minY &&
-        w.cy < maxY &&
-        w.cx >= minX &&
-        w.cx <= maxX &&
-        /[가-힣]/.test(w.text) &&
-        !/이름|승인|출석|현황|삭제|반려|차수|신청/.test(w.text)
-      )
-      .sort((a,b)=>a.cy-b.cy);
-
-    const tolerance = Math.max(8, imageHeight * 0.012);
-    const groups = [];
-
-    for(const w of candidates){
-      const last = groups[groups.length-1];
-      if(!last || Math.abs(w.cy-last.center) > tolerance){
-        groups.push({items:[w], center:w.cy});
-      }else{
-        last.items.push(w);
-        last.center = last.items.reduce((a,x)=>a+x.cy,0)/last.items.length;
-      }
-    }
-
-    return groups
-      .map(g=>g.center)
-      .filter((v,i,arr)=> i===0 || Math.abs(v-arr[i-1]) > tolerance*0.7);
-  }
-
-  function safeRect(left, top, right, bottom, imageWidth, imageHeight){
-    left = Math.max(0, Math.floor(left));
-    top = Math.max(0, Math.floor(top));
-    right = Math.min(imageWidth, Math.ceil(right));
-    bottom = Math.min(imageHeight, Math.ceil(bottom));
-    return {
-      left,
-      top,
-      width:Math.max(1,right-left),
-      height:Math.max(1,bottom-top)
-    };
-  }
-
-  function wordsInsideRect(words, rect){
-    return words
-      .filter(w =>
-        w.cx >= rect.left &&
-        w.cx <= rect.left + rect.width &&
-        w.cy >= rect.top &&
-        w.cy <= rect.top + rect.height
-      )
-      .sort((a,b)=>{
-        if(Math.abs(a.cy-b.cy) > 8) return a.cy-b.cy;
-        return a.cx-b.cx;
-      });
-  }
-
-  function wordsCandidate(words, rect){
-    const items = wordsInsideRect(words, rect);
-    if(!items.length) return {text:'', confidence:0};
-
-    const text = items.map(w=>w.text).join(' ').replace(/\s+/g,' ').trim();
-    const validConf = items.map(w=>w.conf).filter(v=>v>=0);
-    const confidence = validConf.length
-      ? validConf.reduce((a,v)=>a+v,0)/validConf.length
-      : 0;
-
-    return {text, confidence};
-  }
-
-  function cleanCellText(v){
-    return String(v||'')
-      .replace(/[|•●■□◆◇▶►※]/g,' ')
-      .replace(/\s+/g,' ')
-      .trim();
-  }
-
-  function cleanPersonName(v){
-    let s = String(v||'')
-      .replace(/\([^)]*\)/g,' ')
-      .replace(/\[[^\]]*\]/g,' ')
-      .replace(/\s+/g,'')
-      .replace(/[^가-힣]/g,'');
-
-    // 이름 셀 전체가 2~4글자일 때만 확정
-    if(/^[가-힣]{2,4}$/.test(s)) return s;
-
-    // 다른 문자가 섞였으면 마지막 2~4자 한글 후보
-    const match = s.match(/([가-힣]{2,4})$/);
-    return match ? match[1] : '';
-  }
-
-  function cleanStoreName(v){
-    let s = cleanCellText(v)
-      .replace(/학습자|승인|출석|현황|신청|취소|반려|삭제|차수변경/g,' ')
-      .replace(/\s+/g,' ')
-      .trim();
-
-    return s;
-  }
-
-  function validStoreName(v){
-    v = cleanStoreName(v);
-    if(!v) return false;
-    if(v.length < 2 || v.length > 30) return false;
-    if(/승인|출석|현황|신청|취소|반려|삭제/.test(v)) return false;
-    if(!/[가-힣A-Za-z]/.test(v)) return false;
-    return true;
-  }
-
-  function pickBetterName(candidates){
-    const cleaned = candidates
-      .map(c=>({
-        text:cleanPersonName(c.text),
-        confidence:Number(c.confidence||0)
-      }))
-      .filter(c=>/^[가-힣]{2,4}$/.test(c.text));
-
-    if(!cleaned.length) return {text:'',confidence:0,needsReview:true,candidates:[]};
-
-    const groups = new Map();
-    cleaned.forEach(c=>{
-      const arr = groups.get(c.text) || [];
-      arr.push(c);
-      groups.set(c.text,arr);
+  // ---------- OCR via Claude vision ----------
+  async function extractFromImage(base64, mediaType){
+    const resp = await fetch('/api/extract', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({base64, mediaType})
     });
 
-    const ranked = [];
-    for(const [text,arr] of groups.entries()){
-      const avg = arr.reduce((a,x)=>a+x.confidence,0)/arr.length;
-      const voteBonus = arr.length>=2 ? 18 : 0;
-      ranked.push({
-        text,
-        confidence:avg,
-        votes:arr.length,
-        score:avg+voteBonus
-      });
-    }
-
-    ranked.sort((a,b)=>b.score-a.score);
-    const best = ranked[0];
-
-    // 서로 다른 이름 후보가 동시에 나오면 자동 확정 신뢰도를 낮춰 반드시 확인 표시
-    const disagreement = ranked.length >= 2 && ranked[1].text !== best.text;
-    const noMajority = best.votes < 2;
-
-    let finalConfidence = Math.round(best.confidence || 0);
-    if(disagreement || noMajority){
-      finalConfidence = Math.min(finalConfidence, 69);
-    }
-
-    return {
-      text:best.text,
-      confidence:finalConfidence,
-      needsReview:disagreement || noMajority || finalConfidence < 80,
-      candidates:ranked.map(x=>x.text)
-    };
-  }
-
-  function pickBetterStore(candidates){
-    const cleaned = candidates
-      .map(c=>({
-        text:cleanStoreName(c.text),
-        confidence:Number(c.confidence||0)
-      }))
-      .filter(c=>validStoreName(c.text));
-
-    if(!cleaned.length) return {text:'',confidence:0,needsReview:true,candidates:[]};
-
-    const groups = new Map();
-
-    cleaned.forEach(c=>{
-      const key = c.text.replace(/\s+/g,'');
-      const arr = groups.get(key) || [];
-      arr.push(c);
-      groups.set(key,arr);
-    });
-
-    const ranked = [];
-
-    for(const arr of groups.values()){
-      const representative = arr
-        .slice()
-        .sort((a,b)=>b.confidence-a.confidence)[0];
-
-      const avg = arr.reduce((a,x)=>a+x.confidence,0)/arr.length;
-
-      let bonus = 0;
-      if(/대리점/.test(representative.text)) bonus += 8;
-      if(/직영점|본점|지점|센터|매장|점$/.test(representative.text)) bonus += 8;
-      if(arr.length>=2) bonus += 15;
-
-      ranked.push({
-        text:representative.text,
-        confidence:avg,
-        votes:arr.length,
-        score:avg+bonus
-      });
-    }
-
-    ranked.sort((a,b)=>b.score-a.score);
-    const best = ranked[0];
-
-    const disagreement = ranked.length>=2 &&
-      ranked[1].text.replace(/\s+/g,'') !== best.text.replace(/\s+/g,'');
-
-    const noMajority = best.votes < 2;
-
-    let finalConfidence = Math.round(best.confidence || 0);
-    if(disagreement || noMajority){
-      finalConfidence = Math.min(finalConfidence, 69);
-    }
-
-    return {
-      text:best.text,
-      confidence:finalConfidence,
-      needsReview:disagreement || noMajority || finalConfidence < 72,
-      candidates:ranked.map(x=>x.text)
-    };
-  }
-
-  function loadHtmlImage(url){
-    return new Promise((resolve,reject)=>{
-      const img = new Image();
-      img.onload = ()=>resolve(img);
-      img.onerror = ()=>reject(new Error('원본 이미지를 다시 불러오지 못했습니다.'));
-      img.src = url;
-    });
-  }
-
-  function scaleRectForOriginal(rect, processedWidth, processedHeight, originalImg){
-    const sx = originalImg.naturalWidth / processedWidth;
-    const sy = originalImg.naturalHeight / processedHeight;
-
-    return {
-      left: rect.left * sx,
-      top: rect.top * sy,
-      width: rect.width * sx,
-      height: rect.height * sy
-    };
-  }
-
-  function cropDataUrl(img, rect, scale=3, enhance=false){
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.max(1, Math.round(rect.width * scale));
-    canvas.height = Math.max(1, Math.round(rect.height * scale));
-    const ctx = canvas.getContext('2d', {willReadFrequently:true});
-
-    ctx.fillStyle='#fff';
-    ctx.fillRect(0,0,canvas.width,canvas.height);
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(
-      img,
-      rect.left, rect.top, rect.width, rect.height,
-      0,0,canvas.width,canvas.height
-    );
-
-    if(enhance){
-      const id = ctx.getImageData(0,0,canvas.width,canvas.height);
-      const d = id.data;
-      for(let i=0;i<d.length;i+=4){
-        let g = 0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2];
-        // 과도한 threshold 대신 가벼운 대비만 적용
-        g = Math.max(0, Math.min(255, (g-128)*1.25+128));
-        d[i]=d[i+1]=d[i+2]=g;
-      }
-      ctx.putImageData(id,0,0);
-    }
-
-    return canvas.toDataURL('image/png');
-  }
-
-  async function recognizeCrop(worker, img, rect, psm='7'){
-    const rawUrl = cropDataUrl(img, rect, 3, false);
-    const enhancedUrl = cropDataUrl(img, rect, 3, true);
-
-    await worker.setParameters({
-      preserve_interword_spaces:'1',
-      user_defined_dpi:'300',
-      tessedit_pageseg_mode:String(psm)
-    });
-
-    const raw = await worker.recognize(rawUrl, {}, {text:true});
-    const enhanced = await worker.recognize(enhancedUrl, {}, {text:true});
-
-    return [
-      {
-        text:cleanCellText(raw?.data?.text || ''),
-        confidence:Number(raw?.data?.confidence || 0)
-      },
-      {
-        text:cleanCellText(enhanced?.data?.text || ''),
-        confidence:Number(enhanced?.data?.confidence || 0)
-      }
-    ];
-  }
-
-  async function extractStudentsFromTable(worker, processedDataUrl, originalDataUrl, fullWords, imageWidth, imageHeight, onProgress){
-    const geo = findTableGeometry(fullWords, imageWidth, imageHeight);
-    const originalImg = await loadHtmlImage(originalDataUrl || processedDataUrl);
-
-    // 이름 열의 행 위치만 기준으로 교육생 행을 만든다.
-    // 따라서 승인현황/출석현황 영역은 아예 대상이 아니다.
-    let rowCenters = clusterRowCenters(
-      fullWords,
-      geo.headerBottom,
-      imageHeight - 2,
-      geo.nameLeft,
-      geo.nameRight,
-      imageHeight
-    );
-
-    if(rowCenters.length < 1){
-      rowCenters = clusterRowCenters(
-        fullWords,
-        geo.headerBottom,
-        imageHeight - 2,
-        geo.storeLeft,
-        geo.storeRight,
-        imageHeight
-      );
-    }
-
-    if(rowCenters.length < 1){
-      throw new Error('차수별 학습자 정보 표의 교육생 행을 찾지 못했습니다. 소속명·매장명·이름 열이 모두 보이도록 캡처해주세요.');
-    }
-
-    const gaps = [];
-    for(let i=1;i<rowCenters.length;i++){
-      const d = rowCenters[i]-rowCenters[i-1];
-      if(d > 8) gaps.push(d);
-    }
-    gaps.sort((a,b)=>a-b);
-    const medianGap = gaps.length
-      ? gaps[Math.floor(gaps.length/2)]
-      : Math.max(42, imageHeight*0.055);
-
-    const students = [];
-    const seen = new Set();
-
-    for(let i=0;i<rowCenters.length;i++){
-      const cy = rowCenters[i];
-      const prevMid = i===0
-        ? Math.max(geo.headerBottom, cy-medianGap*0.52)
-        : (rowCenters[i-1]+cy)/2;
-      const nextMid = i===rowCenters.length-1
-        ? Math.min(imageHeight, cy+medianGap*0.52)
-        : (cy+rowCenters[i+1])/2;
-
-      const xPad = Math.max(3, imageWidth*0.004);
-      const yPad = Math.max(1, imageHeight*0.001);
-
-      const affRect = safeRect(
-        geo.affLeft+xPad,
-        prevMid+yPad,
-        geo.affRight-xPad,
-        nextMid-yPad,
-        imageWidth,imageHeight
-      );
-      const storeRect = safeRect(
-        geo.storeLeft+xPad,
-        prevMid+yPad,
-        geo.storeRight-xPad,
-        nextMid-yPad,
-        imageWidth,imageHeight
-      );
-      const nameRect = safeRect(
-        geo.nameLeft+xPad,
-        prevMid+yPad,
-        geo.nameRight-xPad,
-        nextMid-yPad,
-        imageWidth,imageHeight
-      );
-
-      if(typeof onProgress === 'function'){
-        onProgress(
-          `교육생 ${i+1}/${rowCenters.length} · 원본 셀 3배 확대 정밀 확인 중`,
-          Math.round((i/rowCenters.length)*100)
-        );
-      }
-
-      // 전체 OCR의 같은 셀 후보
-      const affWordCandidate = wordsCandidate(fullWords, affRect);
-      const storeWordCandidate = wordsCandidate(fullWords, storeRect);
-      const nameWordCandidate = wordsCandidate(fullWords, nameRect);
-
-      // 원본 셀을 3배 확대해 raw/enhanced 두 번 OCR
-      const originalAffRect = scaleRectForOriginal(affRect, imageWidth, imageHeight, originalImg);
-      const originalStoreRect = scaleRectForOriginal(storeRect, imageWidth, imageHeight, originalImg);
-      const originalNameRect = scaleRectForOriginal(nameRect, imageWidth, imageHeight, originalImg);
-
-      const affPasses = await recognizeCrop(worker, originalImg, originalAffRect, '6');
-      const storePasses = await recognizeCrop(worker, originalImg, originalStoreRect, '7');
-      const namePasses = await recognizeCrop(worker, originalImg, originalNameRect, '7');
-
-      // 소속 지역명: 여러 OCR 결과를 모두 이어 붙여 지역 키워드를 찾는다.
-      const affiliationRaw = [
-        affWordCandidate.text,
-        ...affPasses.map(x=>x.text)
-      ].filter(Boolean).join(' ');
-
-      const affiliation = extractMarketingRegion(affiliationRaw);
-
-      const storePick = pickBetterStore([
-        storeWordCandidate,
-        ...storePasses
-      ]);
-
-      const namePick = pickBetterName([
-        nameWordCandidate,
-        ...namePasses
-      ]);
-
-      // 사람이 아닌 행은 제외
-      if(!namePick.text) continue;
-
-      // 현황/버튼 문구 최종 차단
-      if(/승인|출석|현황|신청|취소|반려|삭제/.test(storePick.text)) continue;
-
-      const key = canonicalName(namePick.text);
-      if(seen.has(key)) continue;
-      seen.add(key);
-
-      const st = normalizeStudentRecord({
-        affiliation,
-        storeName:storePick.text,
-        name:namePick.text,
-        durationMin:'',
-        score:null,
-        reason:'',
-        affiliationConfidence: affiliation ? 90 : 0,
-        storeConfidence:storePick.confidence,
-        nameConfidence:namePick.confidence,
-        ocrConfidence:Math.round((storePick.confidence+namePick.confidence)/2)
-      });
-
-      st.storeNeedsReview = !!storePick.needsReview;
-      st.nameNeedsReview = !!namePick.needsReview;
-      st.storeCandidates = storePick.candidates || [];
-      st.nameCandidates = namePick.candidates || [];
-
-      students.push(st);
-    }
-
-    return students;
-  }
-
-  function parseStudentsFromOcr(text){
-    const lines = String(text || '')
-      .split(/\r?\n/)
-      .map(cleanOcrLine)
-      .filter(Boolean);
-
-    const byName = new Map();
-
-    function trailingKoreanName(tokens){
-      if(!tokens.length) return '';
-
-      // 일반적인 "김세현"
-      const last = tokens[tokens.length-1].replace(/[^가-힣]/g,'');
-      if(/^[가-힣]{2,4}$/.test(last)) return last;
-
-      // OCR이 "김 세 현"처럼 이름을 한 글자씩 띄운 경우
-      const chars = [];
-      for(let i=tokens.length-1; i>=0 && chars.length<4; i--){
-        const t = tokens[i].replace(/[^가-힣]/g,'');
-        if(/^[가-힣]$/.test(t)) chars.unshift(t);
-        else break;
-      }
-      const joined = chars.join('');
-      if(/^[가-힣]{2,4}$/.test(joined)) return joined;
-
-      return '';
-    }
-
-    for(let line of lines){
-      if(looksLikeUiLine(line)) continue;
-
-      // 과정 정보 / 날짜 / 차수 / 강사 정보는 학생으로 인식하지 않는다.
-      if(/과정명|교육과정|진행\s*일정|날짜|차수|담당\s*강사|강사명/.test(line)) continue;
-      if(/20\d{2}[.\-/]\s*\d{1,2}[.\-/]\s*\d{1,2}/.test(line)) continue;
-
-      // Zoom의 상태/아이콘/시간 문자열 제거
-      line = line
-        .replace(/\b\d{1,2}:\d{2}(?::\d{2})?\b/g,' ')
-        .replace(/\b\d+\s*(분|초|minutes?|mins?)\b/gi,' ')
-        .replace(/\b(예|아니오|Yes|No|음소거됨|음소거해제|Unmute|Mute)\b/gi,' ')
-        .replace(/[|•●■□◆◇▶►※]/g,' ')
-        .replace(/\s+/g,' ')
-        .trim();
-
-      if(!line) continue;
-      if(/강사|SIA|HOST|호스트/i.test(line)) continue;
-
-      // "(문혜인의 iPad)" 같은 경우
-      const deviceMatch = line.match(/([가-힣]{2,4})의\s*(?:iPad|iPhone|Galaxy|Android|Phone|PC|Mac)/i);
-      let name = deviceMatch ? normalizeKoreanName(deviceMatch[1]) : '';
-
-      let noParen = line
-        .replace(/\([^)]*\)/g,' ')
-        .replace(/\[[^\]]*\]/g,' ')
-        .replace(/\s+/g,' ')
-        .trim();
-
-      let tokens = noParen.split(/\s+/).filter(Boolean);
-
-      if(!name){
-        name = trailingKoreanName(tokens);
-      }
-
-      if(!name) continue;
-      if(OCR_STOPWORDS.has(name)) continue;
-      if(/대리점|본점|지점|센터|매장|교육|강사|참가자|학습자|교육생/.test(name)) continue;
-
-      // 이름이 "김 세 현"처럼 띄어진 경우도 prefix를 정확히 잘라낸다.
-      let prefix = noParen;
-      const compactNamePattern = name.split('').join('\\s*');
-      try{
-        prefix = prefix.replace(new RegExp(compactNamePattern + '\\s*$'), '').trim();
-      }catch(e){
-        const idx = prefix.lastIndexOf(name);
-        if(idx >= 0) prefix = prefix.slice(0,idx).trim();
-      }
-
-      prefix = prefix
-        .replace(/^[\-\d.\s]+/,'')
-        .replace(/\b(호스트|Host|HOST)\b/gi,'')
-        .replace(/\s+/g,' ')
-        .trim();
-
-      if(!prefix) continue;
-
-      const split = splitAffiliationStore(prefix);
-
-      // 너무 긴 UI 문자열은 매장으로 보지 않는다.
-      if((split.storeName||'').length > 30) continue;
-
-      const student = normalizeStudentRecord({
-        name,
-        affiliation: split.affiliation,
-        storeName: split.storeName,
-        durationMin:'',
-        score:null,
-        reason:''
-      });
-
-      const key = canonicalName(student.name);
-      if(!key) continue;
-
-      if(!byName.has(key)){
-        byName.set(key, student);
-      }else{
-        const old = byName.get(key);
-        // 더 구체적인 매장/소속 값 우선
-        if(!old.affiliation && student.affiliation) old.affiliation = student.affiliation;
-        if(!old.storeName && student.storeName) old.storeName = student.storeName;
-        byName.set(key, old);
-      }
-    }
-
-    return Array.from(byName.values());
-  }
-
-  async function extractFromImage(base64, mediaType, onProgress, originalDataUrl){
-    if(typeof Tesseract === 'undefined'){
-      throw new Error('문자인식 프로그램을 불러오지 못했습니다. 인터넷 연결 또는 회사 보안망에서 jsDelivr 접속이 가능한지 확인해주세요.');
-    }
-
-    const dataUrl = `data:${mediaType || 'image/png'};base64,${base64}`;
-
-    const getDimensions = (url)=>new Promise((resolve,reject)=>{
-      const img = new Image();
-      img.onload = ()=>resolve({width:img.naturalWidth || img.width, height:img.naturalHeight || img.height});
-      img.onerror = ()=>reject(new Error('이미지 크기를 확인하지 못했습니다.'));
-      img.src = url;
-    });
-
-    let worker;
+    let data;
     try{
-      const dims = await getDimensions(dataUrl);
-
-      worker = await Tesseract.createWorker('kor+eng', 1, {
-        logger:m=>{
-          if(typeof onProgress === 'function'){
-            const pct = typeof m.progress === 'number' ? Math.round(m.progress*100) : null;
-            const statusMap = {
-              'loading tesseract core':'문자인식 엔진 준비 중',
-              'initializing tesseract':'문자인식 엔진 초기화 중',
-              'loading language traineddata':'한글 인식 데이터 불러오는 중',
-              'initializing api':'한글 인식 준비 중',
-              'recognizing text':'차수별 학습자 정보 표 찾는 중'
-            };
-            onProgress(statusMap[m.status] || '사진 분석 중', pct);
-          }
-        }
-      });
-
-      await worker.setParameters({
-        preserve_interword_spaces:'1',
-        user_defined_dpi:'300',
-        tessedit_pageseg_mode:'6'
-      });
-
-      // 1차: 전체 화면은 "과정정보"와 표 위치를 찾는 용도만 사용.
-      // 학생 데이터는 여기서 바로 만들지 않는다.
-      const full = await worker.recognize(
-        dataUrl,
-        {},
-        { text:true, tsv:true }
-      );
-
-      const text = full?.data?.text || '';
-      const tsv = full?.data?.tsv || '';
-      const words = parseTsv(tsv);
-
-      if(!text.trim()){
-        throw new Error('사진에서 글자를 읽지 못했습니다. 글자가 크게 보이도록 다시 캡처해주세요.');
-      }
-
-      // 과정명/차수/날짜/강사는 전체 화면에서 추출
-      const meta = extractCourseMeta(text);
-
-      // 교육생은 오직 표의 3개 열 아래 셀에서만 추출
-      const students = await extractStudentsFromTable(
-        worker,
-        dataUrl,
-        originalDataUrl || dataUrl,
-        words,
-        dims.width,
-        dims.height,
-        onProgress
-      );
-
-      if(students.length === 0){
-        throw new Error('교육생 정보를 찾지 못했습니다. "소속명 / 매장명 / 이름" 열이 선명하게 보이도록 다시 캡처해주세요.');
-      }
-
-      if(typeof onProgress === 'function'){
-        onProgress('교육생 정보 확인 완료', 100);
-      }
-
-      return {
-        courseName:meta.courseName || '',
-        session:meta.session || '',
-        schedule:meta.schedule || '',
-        instructor:meta.instructor || '',
-        students,
-        _ocrText:text
-      };
-
+      data = await resp.json();
     }catch(e){
-      console.error('Table OCR error:', e);
-      throw e;
-    }finally{
-      if(worker){
-        try{ await worker.terminate(); }catch(e){}
-      }
+      throw new Error(`사진 인식 서버 응답을 읽지 못했습니다. 상태 코드 ${resp.status}`);
     }
+
+    if(!resp.ok){
+      const err = new Error(data?.message || data?.error || `사진 인식 요청 실패 (${resp.status})`);
+      err.code = data?.code || 'VISION_ERROR';
+      throw err;
+    }
+
+    return data;
   }
 
   // 카메라 원본 사진은 용량이 크고 일부 폰은 HEIC 등 API가 지원하지 않는 포맷으로 찍히므로,
@@ -1413,113 +387,61 @@ console.log('attendance-app V9 - original quality preserved + OCR disagreement r
       reader.onerror = ()=> reject(new Error('사진 파일을 읽는 중 문제가 발생했습니다. 다른 사진으로 다시 시도해주세요.'));
 
       reader.onload = ()=>{
-        const rawDataUrl = reader.result; // 압축 전 원본을 그대로 보존
+        const rawDataUrl = reader.result;
         const img = new Image();
 
         img.onload = ()=>{
           try{
-            // 작은 글씨 보존을 위해 OCR 작업 해상도를 높게 유지
-            const MAX_DIM = 3200;
-            const MIN_DIM = 2200;
+            const MAX_DIM = 2200;
+            let {width, height} = img;
 
-            const originalWidth = img.width;
-            const originalHeight = img.height;
-
-            if(originalWidth===0 || originalHeight===0){
+            if(width===0 || height===0){
               reject(new Error('사진 크기를 읽을 수 없습니다. 다른 사진으로 다시 시도해주세요.'));
               return;
             }
 
-            let width = originalWidth;
-            let height = originalHeight;
-            let ratio = 1;
-
-            const longest = Math.max(width,height);
-            if(longest < MIN_DIM){
-              ratio = MIN_DIM / longest;
-            }else if(longest > MAX_DIM){
-              ratio = MAX_DIM / longest;
+            if(width > MAX_DIM || height > MAX_DIM){
+              const ratio = Math.min(MAX_DIM/width, MAX_DIM/height);
+              width = Math.round(width*ratio);
+              height = Math.round(height*ratio);
             }
 
-            width = Math.round(width * ratio);
-            height = Math.round(height * ratio);
-
-            // 사용자가 보는 미리보기는 94% 품질
-            const previewCanvas = document.createElement('canvas');
-            previewCanvas.width = width;
-            previewCanvas.height = height;
-            const pctx = previewCanvas.getContext('2d', {willReadFrequently:true});
-            pctx.fillStyle = '#fff';
-            pctx.fillRect(0,0,width,height);
-            pctx.imageSmoothingEnabled = true;
-            pctx.imageSmoothingQuality = 'high';
-            pctx.drawImage(img, 0, 0, width, height);
-            const previewDataUrl = previewCanvas.toDataURL('image/jpeg', 0.94);
-
-            // OCR 전용 이미지: PNG 사용 → JPEG 재압축으로 작은 글씨가 뭉개지는 것을 방지
             const canvas = document.createElement('canvas');
             canvas.width = width;
             canvas.height = height;
-            const ctx = canvas.getContext('2d', {willReadFrequently:true});
+
+            const ctx = canvas.getContext('2d');
             ctx.fillStyle = '#fff';
             ctx.fillRect(0,0,width,height);
             ctx.imageSmoothingEnabled = true;
             ctx.imageSmoothingQuality = 'high';
-            ctx.drawImage(img, 0, 0, width, height);
+            ctx.drawImage(img, 0,0,width,height);
 
-            const imageData = ctx.getImageData(0,0,width,height);
-            const data = imageData.data;
+            // 인식 정확도가 좋았던 94%를 기본값으로 그대로 유지한다.
+            const qualities = [0.94, 0.92, 0.90, 0.88, 0.86];
+            let chosen = null;
 
-            let sum = 0;
-            let count = 0;
-            const step = Math.max(4, Math.floor((width*height)/90000));
+            for(const q of qualities){
+              const dataUrl = canvas.toDataURL('image/jpeg', q);
+              const base64 = dataUrl.split(',')[1];
 
-            for(let i=0;i<data.length;i+=4*step){
-              const gray = 0.299*data[i] + 0.587*data[i+1] + 0.114*data[i+2];
-              sum += gray;
-              count++;
+              // Vercel Function 요청 4.5MB 제한에 걸리지 않도록 충분한 여유 확보
+              if(base64.length <= 3600000 || q===qualities[qualities.length-1]){
+                chosen = {base64, mediaType:'image/jpeg', dataUrl, quality:q};
+                break;
+              }
             }
 
-            const avg = count ? sum/count : 255;
-            const invert = avg < 115;
-
-            // OCR용 이미지는 과도한 threshold를 쓰지 않고 적당한 대비만 강화
-            for(let i=0;i<data.length;i+=4){
-              let gray = 0.299*data[i] + 0.587*data[i+1] + 0.114*data[i+2];
-              if(invert) gray = 255-gray;
-
-              gray = Math.max(0, Math.min(255, (gray-128)*1.35 + 128));
-
-              if(gray > 238) gray = 255;
-              if(gray < 28) gray = 0;
-
-              data[i] = data[i+1] = data[i+2] = gray;
-            }
-
-            ctx.putImageData(imageData,0,0);
-            const ocrDataUrl = canvas.toDataURL('image/png');
-
-            resolve({
-              base64: ocrDataUrl.split(',')[1],
-              mediaType:'image/png',
-              dataUrl: previewDataUrl,
-              // 중요: 셀 재인식에는 축소/압축된 preview가 아니라 원본 파일 자체 사용
-              originalDataUrl: rawDataUrl,
-              originalWidth,
-              originalHeight,
-              processedWidth: width,
-              processedHeight: height
-            });
+            resolve(chosen);
 
           }catch(e){
-            console.error(e);
-            reject(new Error('사진을 처리하지 못했습니다. 화면 캡처 이미지를 다시 사용해주세요.'));
+            reject(new Error('사진을 처리하지 못했습니다. 다른 사진으로 다시 시도해주세요.'));
           }
         };
 
         img.onerror = ()=>{
           if(isHeic){
-            reject(new Error('HEIC 형식은 브라우저에서 바로 읽기 어렵습니다. 사진 대신 화면 캡처 이미지를 사용해주세요.'));
+            reject(new Error('HEIC 형식 사진은 이 브라우저에서 열 수 없습니다. JPG/PNG 또는 화면 캡처 이미지를 사용해주세요.'));
           }else{
             reject(new Error('사진을 불러오지 못했습니다. 다른 사진으로 다시 시도해주세요.'));
           }
@@ -1534,22 +456,35 @@ console.log('attendance-app V9 - original quality preserved + OCR disagreement r
 
   // ---------- render: list view ----------
   async function renderList(){
-    await consolidateDuplicateSessions();
+    const needsKey = false;
     shell.innerHTML = `
       <div class="topbar">
         <div class="brand">
           <div class="brand-mark">✓</div>
           <div>
             <div class="brand-title">천하무적동부교육팀<br>교육생 만족도 체크</div>
-            <div class="brand-sub">Zoom 캡처 · 모바일/PC 공용</div>
+            <div class="brand-sub">Zoom 캡처 한 장으로 등록</div>
           </div>
         </div>
-        <span class="badge badge-done">WEB</span>
+        
       </div>
-      <button class="btn btn-amber" id="new-btn">＋ Zoom 화면 사진으로 새 차수 등록</button>
+      ${needsKey ? `
+      <div class="card" style="background:#FFFBEB;border-color:#FDE68A;margin-bottom:14px;">
+        <div style="font-size:13.5px;font-weight:800;color:#92400E;">사진 인식을 쓰려면 API 키 등록이 필요합니다</div>
+        <div class="hint" style="color:#92400E;margin-top:4px;">
+          이 사이트는 Claude 화면 밖(독립 배포)에서 열려 있어, 사진에서 이름을 자동으로 읽으려면
+          본인의 Anthropic API 키를 한 번 등록해야 합니다. 등록하지 않아도 명단 수동 입력·점수 기록·엑셀 내보내기는 그대로 쓸 수 있습니다.
+        </div>
+        <button class="btn btn-primary" id="banner-settings-btn" style="margin-top:10px;">지금 등록하기</button>
+      </div>` : ''}
+      <button class="btn btn-amber" id="new-btn">＋ Zoom 화면 사진으로 새 출석 등록</button>
       <div class="card" style="margin-top:16px;padding:10px 6px;" id="list-wrap"></div>
     `;
     document.getElementById('new-btn').onclick = ()=> renderUpload();
+    const settingsBtn = document.getElementById('settings-btn');
+    if(settingsBtn) settingsBtn.onclick = ()=> renderSettings();
+    const bannerBtn = document.getElementById('banner-settings-btn');
+    if(bannerBtn) bannerBtn.onclick = ()=> renderSettings();
     const wrap = document.getElementById('list-wrap');
     wrap.innerHTML = `<div class="loading-wrap"><div class="spin"></div>불러오는 중...</div>`;
     const idx = await getIndex();
@@ -1579,11 +514,11 @@ console.log('attendance-app V9 - original quality preserved + OCR disagreement r
         <button class="back-btn" id="back-btn">← 목록</button>
       </div>
       <div class="card">
-        <label class="field-label" style="margin-top:0;">1. Zoom 참가자 화면 사진</label>
+        <label class="field-label" style="margin-top:0;">1. 차수별 학습자 정보 화면</label>
         <div id="upload-zone" class="upload-zone">
           <div class="upload-icon">📷</div>
           <div class="upload-txt">사진 촬영 또는 이미지 선택</div>
-          <div class="upload-sub">차수별 학습자 정보의 소속명 · 매장명 · 이름 열이 모두 보이도록 캡처해주세요</div>
+          <div class="upload-sub">과정명·차수와 차수별 학습자 정보의 소속명·매장명·이름이 모두 보이도록 캡처해주세요</div>
         </div>
         <input type="file" id="file-input" accept="image/*" style="display:none;">
         <div id="result-zone"></div>
@@ -1608,13 +543,20 @@ console.log('attendance-app V9 - original quality preserved + OCR disagreement r
         return;
       }
       zone.innerHTML = `<img class="preview-img" src="${norm.dataUrl}">`;
-      resultZone.innerHTML = `<div class="loading-wrap"><div class="spin"></div>차수별 학습자 정보 표를 찾고 매장명·이름을 셀별로 읽는 중...</div>`;
+      resultZone.innerHTML = `<div class="loading-wrap"><div class="spin"></div>사진에서 과정 정보와 학습자 명단을 정밀 인식 중...</div>`;
       try{
-        const parsed = await extractFromImage(norm.base64, norm.mediaType, (status,pct)=>{
-          resultZone.innerHTML = `<div class="loading-wrap"><div class="spin"></div>${esc(status)}${pct!==null?` ${pct}%`:''}</div>
-            <div class="hint" style="text-align:center;">매장명과 이름은 원본 셀을 3배 확대해 다시 확인합니다.</div>`;
-        }, norm.originalDataUrl || norm.dataUrl);
-        draftStudents = mergeStudents([], (parsed.students||[]).map(s=>normalizeStudentRecord(s)));
+        const parsed = await extractFromImage(norm.base64, norm.mediaType);
+        draftStudents = mergeStudents([], (parsed.students||[]).map(s=>({
+          id:uid(),
+          name:s.name||'',
+          affiliation:s.affiliation||'',
+          storeName:s.storeName||'',
+          joinTime:'',
+          leaveTime:'',
+          durationMin:'',
+          score:null,
+          reason:''
+        })));
         renderDraftEditor({
           courseName: parsed.courseName || '',
           session: parsed.session || '',
@@ -1622,7 +564,21 @@ console.log('attendance-app V9 - original quality preserved + OCR disagreement r
           instructor: parsed.instructor || ''
         });
       }catch(err){
+        if(err.code === 'API_KEY_MISSING'){
+          resultZone.innerHTML = `<div class="hint" style="color:var(--red);">사진 인식을 사용하려면 먼저 Anthropic API 키를 등록해야 합니다.</div>
+            <div class="row" style="margin-top:10px;">
+              <button class="btn btn-primary btn-sm" id="goto-settings-btn">API 키 등록하기</button>
+              <button class="btn btn-outline btn-sm" id="manual-btn">사진 없이 직접 입력</button>
+            </div>`;
+          document.getElementById('goto-settings-btn').onclick = ()=> renderSettings();
+          document.getElementById('manual-btn').onclick = ()=>{
+            draftStudents = [];
+            renderDraftEditor({courseName:'', session:'', schedule:'', instructor:''});
+          };
+          return;
+        }
         resultZone.innerHTML = `<div class="hint" style="color:var(--red);">인식에 실패했습니다: ${esc(err.message || '알 수 없는 오류')}</div>
+          ${err.code==='SERVER_API_KEY_MISSING' ? '<div class="hint" style="margin-top:6px;">Vercel 프로젝트의 환경 변수에 ANTHROPIC_API_KEY를 등록한 뒤 재배포해주세요.</div>' : ''}
           <div class="row" style="margin-top:10px;">
             <button class="btn btn-outline btn-sm" id="retry-btn">다시 촬영/선택</button>
             <button class="btn btn-outline btn-sm" id="manual-btn">사진 없이 직접 입력</button>
@@ -1636,73 +592,71 @@ console.log('attendance-app V9 - original quality preserved + OCR disagreement r
     };
   }
 
+  // ---------- render: settings (API key) — 독립 배포 환경에서만 노출 ----------
+  function renderSettings(){
+    const saved = (window.localStorage.getItem('anthropic-api-key')||'');
+    shell.innerHTML = `
+      <div class="topbar">
+        <button class="back-btn" id="back-btn">← 목록</button>
+      </div>
+      <div class="card">
+        <label class="field-label" style="margin-top:0;">Anthropic API 키</label>
+        <input type="text" id="key-input" value="${esc(saved)}" placeholder="sk-ant-...">
+        <div class="hint">
+          이 키는 서버로 전송되지 않고 이 브라우저(이 기기)에만 저장되며, 사진에서 이름·시간을 자동으로 읽는 기능에만 사용됩니다.
+          <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener" style="color:var(--navy);font-weight:700;">console.anthropic.com</a>에서 발급받을 수 있습니다.
+        </div>
+        <button class="btn btn-primary" id="save-key-btn" style="margin-top:16px;">저장</button>
+        ${saved? '<button class="btn btn-outline" id="clear-key-btn" style="margin-top:8px;">키 삭제</button>' : ''}
+      </div>
+    `;
+    document.getElementById('back-btn').onclick = ()=> renderList();
+    document.getElementById('save-key-btn').onclick = ()=>{
+      const v = document.getElementById('key-input').value.trim();
+      if(v===''){ toast('API 키를 입력해주세요'); return; }
+      window.localStorage.setItem('anthropic-api-key', v);
+      toast('저장되었습니다');
+      renderList();
+    };
+    const clearBtn = document.getElementById('clear-key-btn');
+    if(clearBtn) clearBtn.onclick = ()=>{
+      window.localStorage.removeItem('anthropic-api-key');
+      toast('삭제되었습니다');
+      renderSettings();
+    };
+  }
+
   function renderDraftEditor(guess){
     const resultZone = document.getElementById('result-zone');
     const today = new Date();
     const todayStr = `${today.getFullYear()}.${String(today.getMonth()+1).padStart(2,'0')}.${String(today.getDate()).padStart(2,'0')}`;
-
     resultZone.innerHTML = `
       <label class="field-label">2. 교육과정 정보 확인</label>
-
-      <label class="mini-label">과정명</label>
-      <input type="text" id="course-input" value="${esc(guess.courseName||'')}" placeholder="예: [부산] 유선인증과정 BOOST(8월)">
-
-      <label class="mini-label" style="margin-top:8px;">차수</label>
-      <input type="text" id="session-input" value="${esc(guess.session||'')}" placeholder="예: 18 또는 18차수">
-
-      <label class="mini-label" style="margin-top:8px;">날짜</label>
-      <input type="text" id="schedule-input" value="${esc(guess.schedule || todayStr)}" placeholder="예: 2026.08.12">
-
-      <label class="mini-label" style="margin-top:8px;">강사</label>
-      <input type="text" id="instructor-input" value="${esc(guess.instructor||'')}" placeholder="담당 강사">
-
-      <div class="hint" style="margin-top:7px;">
-        위 4개 항목만 사진에서 자동 입력합니다. 자동 인식값이 다르면 여기서 바로 수정하세요.
-      </div>
-
-      <label class="field-label">3. 교육생 정보 확인 (${draftStudents.length}명)</label>
-      <div class="student-head-grid">
-        <div>소속</div><div>매장명</div><div>이름</div><div>참여 시간</div><div></div>
-      </div>
+      <input type="text" id="course-input" value="${esc(guess.courseName)}" placeholder="교육과정명 (예: [부산] 유선인증과정 BOOST(8월))">
+      <input type="text" id="session-input" value="${esc(guess.session)}" placeholder="차수 (숫자만 입력해도 자동으로 '차수'가 붙습니다. 예: 18)" style="margin-top:8px;">
+      <input type="text" id="schedule-input" value="${esc(guess.schedule || todayStr)}" placeholder="진행 일정 (예: 2026.08.12)" style="margin-top:8px;">
+      <input type="text" id="instructor-input" value="${esc(guess.instructor || '')}" placeholder="담당 강사" style="margin-top:8px;">
+      <div class="hint" style="margin-top:6px;">사진에서 자동으로 읽은 값입니다. 틀렸거나 비어 있으면 직접 고쳐주세요. 저장 후에도 언제든 다시 수정할 수 있습니다.</div>
+      <label class="field-label">3. 교육생 정보 확인 (${draftStudents.length}명) — 소속 · 매장명 · 이름 · 참여 시간</label>
       <div id="draft-list"></div>
-
-      <button class="btn btn-outline btn-sm" id="add-row-btn" style="margin-top:4px;">+ 교육생 직접 추가</button>
-      <div class="source-check-note">
-        <b>자동 인식 결과는 바로 수정할 수 있습니다.</b><br>
-        소속은 ○○마케팅팀의 지역명만 입력합니다. 매장명과 이름은 <b>압축하지 않은 원본 셀</b>을 3배 확대해 여러 번 읽고 비교합니다.
-        OCR 결과가 서로 다르거나 신뢰도가 낮으면 <b>노란색 칸</b>으로 표시합니다. 확신이 없는 글자를 한쪽 값으로 숨겨 확정하지 않고, 원본을 보고 바로 수정할 수 있게 했습니다.
-        승인현황·출석현황·승인/반려/삭제 버튼은 교육생 정보에 포함하지 않습니다.
-      </div>
-      <button class="btn btn-primary" id="save-draft-btn" style="margin-top:16px;">명단 저장하고 태도 입력하기</button>
+      <button class="btn btn-outline btn-sm" id="add-row-btn" style="margin-top:4px;">+ 교육생 수동 추가</button>
+      <div class="hint">소속·매장명·이름은 이미지에서 자동 입력됩니다. 참여 시간(분)은 직접 입력해주세요. 저장 전에 모든 값을 수정할 수 있습니다.</div>
+      <button class="btn btn-primary" id="save-draft-btn" style="margin-top:16px;">이 명단으로 저장하기</button>
     `;
-
     renderDraftRows();
-
     document.getElementById('add-row-btn').onclick = ()=>{
-      draftStudents.push(normalizeStudentRecord({
-        id:uid(), affiliation:'', storeName:'', name:'', durationMin:'', score:null, reason:''
-      }));
+      draftStudents.push({id:uid(), name:'', affiliation:'', storeName:'', joinTime:'', leaveTime:'', durationMin:'', score:null, reason:''});
       renderDraftRows();
     };
-
     document.getElementById('save-draft-btn').onclick = async ()=>{
       const courseName = document.getElementById('course-input').value.trim();
       const session = normalizeSession(document.getElementById('session-input').value);
       const schedule = document.getElementById('schedule-input').value.trim() || todayStr;
       const instructor = document.getElementById('instructor-input').value.trim();
-
-      if(courseName===''){
-        toast('과정명을 입력해주세요');
-        return;
-      }
-
+      if(courseName===''){ toast('교육과정명을 입력해주세요'); return; }
       const cleaned = mergeStudents([], draftStudents.filter(s=>String(s.name||'').trim()!==''));
-      if(cleaned.length===0){
-        toast('교육생을 최소 1명 입력해주세요');
-        return;
-      }
+      if(cleaned.length===0){ toast('교육생을 최소 1명 입력해주세요'); return; }
 
-      // 같은 과정 + 같은 차수 + 같은 날짜가 이미 있으면 새 차수를 만들지 않고 갱신
       let sess = await findExistingSession(courseName, session, schedule);
 
       if(sess){
@@ -1714,27 +668,23 @@ console.log('attendance-app V9 - original quality preserved + OCR disagreement r
         sess.students = mergeStudents(sess.students || [], cleaned);
 
         const ok = await saveSession(sess);
-        toast(ok
-          ? '기존 차수에 중복 없이 명단을 반영했습니다.'
-          : '저장에 실패했습니다');
+        toast(ok? '기존 차수에 중복 없이 명단을 반영했습니다.' : '저장에 실패했습니다');
         if(ok) renderDetail(sess.id);
         return;
       }
 
       sess = {
-        id: uid(),
+        id:uid(),
         courseName,
         session,
         instructor,
-        title: buildTitle(courseName, session),
-        date: schedule,
-        students: cleaned
+        title:buildTitle(courseName, session),
+        date:schedule,
+        students:cleaned
       };
 
       const ok = await saveSession(sess);
-      toast(ok
-        ? '명단이 저장되었습니다. 이어서 태도를 입력하세요.'
-        : '저장에 실패했습니다');
+      toast(ok? '명단이 저장되었습니다. 이어서 태도를 입력해보세요.' : '저장에 실패했습니다');
       if(ok) renderDetail(sess.id);
     };
   }
@@ -1764,48 +714,28 @@ console.log('attendance-app V9 - original quality preserved + OCR disagreement r
 
   function renderDraftRows(){
     const wrap = document.getElementById('draft-list');
-
-    draftStudents = mergeStudents([], draftStudents || []);
-
-    wrap.innerHTML = draftStudents.map((raw,i)=>{
-      const s = normalizeStudentRecord(raw);
-      draftStudents[i] = s;
-      return `
-        <div class="student-row triplet" data-i="${i}">
-          <div class="mini-field">
-            <span class="mini-label">소속(지역)</span>
-            <input type="text" class="da ${s.affiliationConfidence!==null && s.affiliationConfidence<60?'ocr-low':''}" value="${esc(s.affiliation)}" placeholder="예: 동대구">
-          </div>
-          <div class="mini-field">
-            <span class="mini-label">매장명</span>
-            <input type="text" class="ds ${(s.storeNeedsReview || (s.storeConfidence!==null && s.storeConfidence<72))?'ocr-low':''}" value="${esc(s.storeName)}" placeholder="예: 더블유대리점 동성로직영점" title="${(s.storeNeedsReview || (s.storeConfidence!==null && s.storeConfidence<72))?'OCR 후보가 서로 다르거나 신뢰도가 낮습니다. 원본과 비교해 수정해주세요. 후보: '+esc((s.storeCandidates||[]).join(' / ')):''}">
-          </div>
-          <div class="mini-field student-name-field">
-            <span class="mini-label">이름</span>
-            <input type="text" class="dn ${(s.nameNeedsReview || (s.nameConfidence!==null && s.nameConfidence<80))?'ocr-low':''}" value="${esc(s.name)}" placeholder="예: 김태현" title="${(s.nameNeedsReview || (s.nameConfidence!==null && s.nameConfidence<80))?'OCR 후보가 서로 다르거나 신뢰도가 낮습니다. 원본과 비교해 수정해주세요. 후보: '+esc((s.nameCandidates||[]).join(' / ')):''}">
-          </div>
-          <div class="mini-field student-duration-field">
-            <span class="mini-label">참여 시간(분)</span>
-            <input type="number" min="0" class="dd" value="${esc(s.durationMin||'')}" placeholder="예: 91">
-          </div>
-          <button class="rm-btn" data-rm="${i}" title="삭제">✕</button>
+    wrap.innerHTML = draftStudents.map((s,i)=>`
+      <div class="student-row" data-i="${i}">
+        <div class="student-row-top">
+          <input type="text" class="dn" value="${esc(s.name)}" placeholder="이름">
+          <button class="rm-btn" data-rm="${i}">✕</button>
         </div>
-      `;
-    }).join('');
-
+        <div class="student-row-bottom">
+          <input type="text" class="da" value="${esc(s.affiliation)}" placeholder="소속 (예: 동대구)">
+          <input type="text" class="ds" value="${esc(s.storeName)}" placeholder="매장명">
+          <input type="text" class="dt" value="${esc(s.durationMin)}" placeholder="참여 시간(분)">
+        </div>
+      </div>
+    `).join('');
     wrap.querySelectorAll('.student-row').forEach(row=>{
       const i = +row.dataset.i;
+      row.querySelector('.dn').oninput = e=> draftStudents[i].name = e.target.value;
       row.querySelector('.da').oninput = e=> draftStudents[i].affiliation = e.target.value;
       row.querySelector('.ds').oninput = e=> draftStudents[i].storeName = e.target.value;
-      row.querySelector('.dn').oninput = e=> draftStudents[i].name = e.target.value;
-      row.querySelector('.dd').oninput = e=> draftStudents[i].durationMin = e.target.value === '' ? '' : Math.max(0, +e.target.value);
+      row.querySelector('.dt').oninput = e=> draftStudents[i].durationMin = e.target.value;
     });
-
     wrap.querySelectorAll('[data-rm]').forEach(btn=>{
-      btn.onclick = ()=>{
-        draftStudents.splice(+btn.dataset.rm,1);
-        renderDraftRows();
-      };
+      btn.onclick = ()=>{ draftStudents.splice(+btn.dataset.rm,1); renderDraftRows(); };
     });
   }
 
@@ -1907,18 +837,13 @@ console.log('attendance-app V9 - original quality preserved + OCR disagreement r
       const filled = st.score!==null && st.score!=='' && st.score!==undefined;
       return `
       <div class="score-card ${filled?'filled':''}" data-i="${i}">
-        <div class="sc-head">
-          <div style="flex:1;min-width:0;">
-            <div class="row" style="gap:6px;">
-              <input type="text" class="sc-affil" value="${esc(st.affiliation||'')}" placeholder="소속">
-              <input type="text" class="sc-store" value="${esc(st.storeName||'')}" placeholder="매장명">
-            </div>
-            <input type="text" class="sc-name-input" value="${esc(st.name||'')}" placeholder="이름" style="margin-top:6px;font-weight:800;">
-            <div style="display:flex;align-items:center;gap:6px;margin-top:6px;">
-              <input type="number" min="0" class="sc-duration" value="${esc(st.durationMin||'')}" placeholder="참여 시간">
-              <span style="font-size:12px;color:var(--sub);white-space:nowrap;">분</span>
-            </div>
-          </div>
+        <div class="sc-org-row">
+          <input type="text" class="sc-affil" value="${esc(st.affiliation)}" placeholder="소속 (예: 동대구)">
+          <input type="text" class="sc-store" value="${esc(st.storeName)}" placeholder="매장명">
+        </div>
+        <div class="sc-org-row" style="margin-top:6px;">
+          <input type="text" class="sc-name-input" value="${esc(st.name)}" placeholder="이름">
+          <input type="number" min="0" class="sc-duration" value="${esc(st.durationMin)}" placeholder="참여 시간(분)">
         </div>
         <div class="chip-row">
           ${REASON_PRESETS.map(p=>`<span class="chip ${st.score==p.score?'active':''}" data-preset="${p.score}">${p.label}</span>`).join('')}
@@ -1949,9 +874,7 @@ console.log('attendance-app V9 - original quality preserved + OCR disagreement r
       card.querySelector('.sc-affil').oninput = e=>{ s.students[i].affiliation = e.target.value; };
       card.querySelector('.sc-store').oninput = e=>{ s.students[i].storeName = e.target.value; };
       card.querySelector('.sc-name-input').oninput = e=>{ s.students[i].name = e.target.value; };
-      card.querySelector('.sc-duration').oninput = e=>{
-        s.students[i].durationMin = e.target.value === '' ? '' : Math.max(0, +e.target.value);
-      };
+      card.querySelector('.sc-duration').oninput = e=>{ s.students[i].durationMin = e.target.value; };
     });
   }
 
@@ -1959,78 +882,18 @@ console.log('attendance-app V9 - original quality preserved + OCR disagreement r
   function exportXlsx(){
     const s = currentSession;
     const fileBase = buildFileBase(s);
-
-    const rows = s.students.map(raw=>{
-      const st = normalizeStudentRecord(raw);
-      return `
-      <tr>
-        <td>${esc(st.affiliation||'')}</td>
-        <td>${esc(st.storeName||'')}</td>
-        <td>${esc(st.name||'')}</td>
-        <td>${esc(st.durationMin||'')}</td>
-        <td>${st.score===null||st.score===undefined?'':esc(st.score)}</td>
-        <td>${esc(st.reason||'')}</td>
-      </tr>`;
-    }).join('');
-
-    const excelHtml = `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<style>
-table{border-collapse:collapse;font-family:"Malgun Gothic",sans-serif;font-size:11pt}
-th,td{border:1px solid #999;padding:6px 8px;vertical-align:top}
-th{font-weight:bold;background:#e9ecff}
-.title{font-size:15pt;font-weight:bold}
-.meta{font-size:10pt}
-</style>
-</head>
-<body>
-<div class="title">${esc(s.title||fileBase)}</div>
-<div class="meta">${esc(s.date||'')}${s.instructor?' · 담당 강사: '+esc(s.instructor):''}</div>
-<br>
-<table>
-<thead><tr>
-<th>소속</th><th>매장명</th><th>이름</th><th>참여 시간(분)</th><th>점수</th><th>사유</th>
-</tr></thead>
-<tbody>${rows}</tbody>
-</table>
-</body>
-</html>`;
-
-    const blob = new Blob(['\uFEFF', excelHtml], {type:'application/vnd.ms-excel;charset=utf-8'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${fileBase}.xls`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url), 1500);
-    toast('Excel 파일이 저장되었습니다');
-  }
-
-  function csvEscape(v){
-    const s = (v===undefined||v===null?'':String(v));
-    return '"'+s.replace(/"/g,'""')+'"';
-  }
-  function exportCsvFallback(){
-    const s = currentSession;
-    const fileBase = buildFileBase(s);
     const rows = [
-      ['소속','매장명','이름','참여 시간(분)','점수','사유'],
-      ...s.students.map(raw=>{
-        const st = normalizeStudentRecord(raw);
-        return [st.affiliation, st.storeName, st.name, st.durationMin, st.score, st.reason];
-      })
+      [fileBase],
+      [`${s.date || ''}${s.instructor? '  ·  담당 강사: '+s.instructor : ''}`],
+      [],
+      ['이름','소속','매장명','참가시간','나간시간','참여시간(분)','점수','사유'],
+      ...s.students.map(st=>[st.name, st.affiliation, st.storeName, st.joinTime, st.leaveTime, st.durationMin, st.score, st.reason])
     ];
-    const csv = '\uFEFF' + rows.map(r=>r.map(csvEscape).join(',')).join('\r\n');
-    const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href=url; a.download=`${fileBase}.csv`;
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url), 1500);
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{wch:14},{wch:12},{wch:16},{wch:14},{wch:14},{wch:12},{wch:8},{wch:36}];
+    XLSX.utils.book_append_sheet(wb, ws, '출석및태도');
+    XLSX.writeFile(wb, `${fileBase}.xlsx`);
   }
 
   // ---------- export: image (drawn directly on canvas, no external lib) ----------
@@ -2064,45 +927,40 @@ th{font-weight:bold;background:#e9ecff}
   function exportImage(){
     const s = currentSession;
     const fileBase = buildFileBase(s);
-    const SCALE = 2;
-    const W = 760;
+    const SCALE = 2; // retina-ish output
+    const W = 640;
     const PAD = 26;
-    const colAffil = 105, colStore = 105, colName = 85, colDuration = 70, colScore = 45;
-    const colReason = W - PAD*2 - colAffil - colStore - colName - colDuration - colScore;
-    const lineH = 16;
-    const rowPadV = 10;
+    const CARD_PAD = 16;
+    const nameH = 20, metaH = 17, reasonLineH = 16, gapAfterMeta = 8, cardGap = 10;
     const headerH = 92;
-    const tableHeadH = 32;
 
     const meas = document.createElement('canvas').getContext('2d');
-    meas.font = '12px -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
-
-    const rows = s.students.map(raw=>{
-      const st = normalizeStudentRecord(raw);
-      const scoreTxt = (st.score!==null && st.score!==undefined && st.score!=='') ? String(st.score) : '-';
-      const reasonLines = wrapText(meas, st.reason || '-', colReason - 12);
-      const rowH = Math.max(lineH*2 + rowPadV, reasonLines.length*lineH + rowPadV);
-      return {
-        affiliation:st.affiliation||'-',
-        storeName:st.storeName||'-',
-        name:st.name||'',
-        durationTxt:st.durationMin!=='' && st.durationMin!==undefined ? String(st.durationMin)+'분' : '-',
-        scoreTxt,
-        reasonLines,
-        rowH
-      };
+    meas.font = '500 12px -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
+    const contentW = W - PAD*2 - CARD_PAD*2 - 64; // 오른쪽 점수 배지 공간 확보
+    const rows = s.students.map(st=>{
+      const scoreVal = (st.score!==null && st.score!==undefined && st.score!=='') ? Number(st.score) : null;
+      const metaParts = [];
+      if(st.affiliation) metaParts.push(st.affiliation);
+      if(st.storeName) metaParts.push(st.storeName);
+      if(st.durationMin!==undefined && st.durationMin!==null && st.durationMin!=='') metaParts.push(`${st.durationMin}분 참여`);
+      const metaText = metaParts.length ? metaParts.join('   ·   ') : '';
+      const reasonLines = st.reason ? wrapText(meas, st.reason, contentW) : [];
+      const cardH = CARD_PAD*2 + nameH + (metaText? metaH : 0) + (reasonLines.length? gapAfterMeta + reasonLines.length*reasonLineH : 0);
+      return { name: st.name||'(이름 없음)', metaText, reasonLines, scoreVal, cardH };
     });
+    const totalH = headerH + rows.reduce((a,r)=>a+r.cardH+cardGap,0) + PAD - cardGap + 10;
 
-    const totalH = headerH + tableHeadH + rows.reduce((a,r)=>a+r.rowH,0) + PAD;
     const canvas = document.createElement('canvas');
     canvas.width = W*SCALE;
     canvas.height = totalH*SCALE;
     const ctx = canvas.getContext('2d');
     ctx.scale(SCALE, SCALE);
 
-    ctx.fillStyle = '#FFFFFF';
+    // 배경
+    ctx.fillStyle = '#F3F4FD';
     ctx.fillRect(0,0,W,totalH);
 
+    // 헤더
     ctx.fillStyle = '#1E1B4B';
     ctx.font = '800 19px -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
     ctx.fillText(fileBase, PAD, 36);
@@ -2110,47 +968,72 @@ th{font-weight:bold;background:#e9ecff}
     ctx.font = '600 12px -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
     ctx.fillText(`${s.date || ''} · 교육생 ${s.students.length}명`, PAD, 56);
 
-    ctx.strokeStyle = '#E7E9F5';
-    ctx.beginPath(); ctx.moveTo(PAD,70); ctx.lineTo(W-PAD,70); ctx.stroke();
+    function scoreColor(v){
+      if(v===null) return {bg:'#F3F4F6', fg:'#9CA3AF'};
+      if(v>=90) return {bg:'#DCFCE7', fg:'#15803D'};
+      if(v>=75) return {bg:'#FEF3C7', fg:'#B45309'};
+      return {bg:'#FEE2E2', fg:'#B91C1C'};
+    }
+
+    function roundRect(x,y,w,h,r){
+      ctx.beginPath();
+      ctx.moveTo(x+r,y);
+      ctx.arcTo(x+w,y,x+w,y+h,r);
+      ctx.arcTo(x+w,y+h,x,y+h,r);
+      ctx.arcTo(x,y+h,x,y,r);
+      ctx.arcTo(x,y,x+w,y,r);
+      ctx.closePath();
+    }
 
     let y = headerH;
-    ctx.fillStyle = '#4F46E5';
-    ctx.fillRect(PAD,y,W-PAD*2,tableHeadH);
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = '700 12px -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
-
-    ctx.fillText('소속', PAD+10, y+20);
-    ctx.fillText('매장명', PAD+colAffil+10, y+20);
-    ctx.fillText('이름', PAD+colAffil+colStore+10, y+20);
-    ctx.fillText('참여', PAD+colAffil+colStore+colName+10, y+20);
-    ctx.fillText('점수', PAD+colAffil+colStore+colName+colDuration+10, y+20);
-    ctx.fillText('사유', PAD+colAffil+colStore+colName+colDuration+colScore+10, y+20);
-    y += tableHeadH;
-
-    rows.forEach((r,i)=>{
-      ctx.fillStyle = i%2 ? '#F5F6FF' : '#FFFFFF';
-      ctx.fillRect(PAD,y,W-PAD*2,r.rowH);
-
-      ctx.font = '500 11.5px -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
-      ctx.fillStyle = '#374151';
-      ctx.fillText(r.affiliation, PAD+10, y+18);
-      ctx.fillText(r.storeName, PAD+colAffil+10, y+18);
-
-      ctx.font = '700 12.5px -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
-      ctx.fillStyle = '#1F2430';
-      ctx.fillText(r.name, PAD+colAffil+colStore+10, y+18);
-      ctx.fillText(r.durationTxt, PAD+colAffil+colStore+colName+10, y+18);
-      ctx.fillText(r.scoreTxt, PAD+colAffil+colStore+colName+colDuration+10, y+18);
-
-      ctx.font = '500 11.5px -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
-      ctx.fillStyle = '#374151';
-      r.reasonLines.forEach((ln,li)=>
-        ctx.fillText(ln, PAD+colAffil+colStore+colName+colDuration+colScore+10, y+18+li*lineH)
-      );
-
+    rows.forEach(r=>{
+      // 카드 배경
+      ctx.fillStyle = '#FFFFFF';
+      roundRect(PAD, y, W-PAD*2, r.cardH, 12);
+      ctx.fill();
       ctx.strokeStyle = '#E7E9F5';
-      ctx.beginPath(); ctx.moveTo(PAD,y+r.rowH); ctx.lineTo(W-PAD,y+r.rowH); ctx.stroke();
-      y += r.rowH;
+      ctx.lineWidth = 1;
+      roundRect(PAD+0.5, y+0.5, W-PAD*2-1, r.cardH-1, 12);
+      ctx.stroke();
+
+      let ty = y + CARD_PAD;
+
+      // 이름
+      ctx.fillStyle = '#1E1B4B';
+      ctx.font = '800 15px -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
+      ctx.fillText(r.name, PAD+CARD_PAD, ty+14);
+
+      // 점수 배지 (오른쪽 정렬)
+      const sc = scoreColor(r.scoreVal);
+      const scoreLabel = r.scoreVal===null ? '미입력' : `${r.scoreVal}점`;
+      ctx.font = '700 12px -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
+      const badgeW = ctx.measureText(scoreLabel).width + 20;
+      const badgeX = W - PAD - CARD_PAD - badgeW;
+      ctx.fillStyle = sc.bg;
+      roundRect(badgeX, ty-2, badgeW, 22, 11);
+      ctx.fill();
+      ctx.fillStyle = sc.fg;
+      ctx.fillText(scoreLabel, badgeX+10, ty+13);
+
+      ty += nameH;
+
+      // 대리점명 · 참여시간
+      if(r.metaText){
+        ctx.fillStyle = '#6B7280';
+        ctx.font = '500 12px -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
+        ctx.fillText(r.metaText, PAD+CARD_PAD, ty+11);
+        ty += metaH;
+      }
+
+      // 사유
+      if(r.reasonLines.length){
+        ty += gapAfterMeta;
+        ctx.fillStyle = '#374151';
+        ctx.font = '500 12px -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
+        r.reasonLines.forEach((ln,li)=> ctx.fillText(ln, PAD+CARD_PAD, ty+11+li*reasonLineH));
+      }
+
+      y += r.cardH + cardGap;
     });
 
     try{
