@@ -20,8 +20,6 @@
     --shadow: 0 1px 2px rgba(30,27,75,.04), 0 8px 24px rgba(79,70,229,.07);
   }
   *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;min-height:100%;background:#F3F4FD;}
-  body{min-height:100vh;}
   #app-root{
     font-family:-apple-system,BlinkMacSystemFont,'Malgun Gothic','Apple SD Gothic Neo','Segoe UI',sans-serif;
     background:radial-gradient(circle at 12% 0%, #EEF0FF 0%, var(--paper) 42%);
@@ -175,8 +173,7 @@
   <div class="shell" id="shell"></div>
 </div>
 
-<!-- 서버 API 없이 브라우저 안에서 OCR 실행 -->
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <script>
 (function(){
@@ -195,16 +192,30 @@
   ];
 
   // ---------- storage helpers ----------
-  // 공개 웹 배포 버전: 기록은 각 사용자의 브라우저 localStorage에 저장됩니다.
-  // 따라서 같은 URL을 사용해도 기기/브라우저별 기록은 서로 섞이지 않습니다.
+  // Claude 아티팩트 안에서는 window.storage(클라우드 저장)를 쓰고,
+  // Vercel/Netlify 등 독립 배포 환경에서는 자동으로 localStorage(이 브라우저 안에만 저장)로 전환된다.
+  const HAS_CLAUDE_STORAGE = (typeof window !== 'undefined') && !!window.storage && typeof window.storage.get === 'function';
+
   async function kvGet(key){
+    if(HAS_CLAUDE_STORAGE){
+      try{ const r = await window.storage.get(key, false); return r ? r.value : null; }
+      catch(e){ return null; }
+    }
     try{ return window.localStorage.getItem(key); }catch(e){ return null; }
   }
   async function kvSet(key, value){
+    if(HAS_CLAUDE_STORAGE){
+      try{ const r = await window.storage.set(key, value, false); return !!r; }
+      catch(e){ console.error('kvSet fail', e); return false; }
+    }
     try{ window.localStorage.setItem(key, value); return true; }
     catch(e){ console.error('kvSet fail', e); return false; }
   }
   async function kvDelete(key){
+    if(HAS_CLAUDE_STORAGE){
+      try{ await window.storage.delete(key, false); }catch(e){}
+      return;
+    }
     try{ window.localStorage.removeItem(key); }catch(e){}
   }
 
@@ -261,193 +272,97 @@
     return (s===undefined||s===null?'':String(s)).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
 
-  // ---------- 브라우저 OCR ----------
-  // 서버 API / API Key / Vercel Function을 사용하지 않습니다.
-  // 이미지 문자인식은 사용자의 브라우저에서 Tesseract.js로 실행됩니다.
+  // ---------- OCR via Claude vision ----------
+  async function extractFromImage(base64, mediaType){
+    const prompt = `이 이미지는 Zoom 화상회의 종료 후 참가자 목록 화면입니다.
+화면에 보이는 모든 실제 교육생(호스트/강사 계정은 제외)을 아래 JSON 형식으로만 응답하세요.
+설명, 코드블록, 마크다운 없이 순수 JSON 객체 하나만 출력하세요.
 
-  const OCR_STOPWORDS = new Set([
-    '참가자','참가자목록','참가','목록','이름','회의','회의정보','대기실','호스트',
-    '교육강사','강사','나','초대','모두음소거','음소거','비디오','오디오',
-    '채팅','반응','화면공유','보안','기록','종료','나가기','검색','더보기',
-    'zoom','ZOOM','Zoom','SIA','sia'
-  ]);
+같은 사람이 재접속 등으로 여러 번 나오면, 가장 정보가 온전한(가장 오래 머문) 한 줄로 합쳐서 한 명당 한 번만 포함하세요.
+참가/나간 시간이나 접속시간(분)이 화면에 없으면 빈 문자열로 두세요.
 
-  function cleanOcrLine(line){
-    return String(line || '')
-      .replace(/[|•●■□◆◇▶►※]/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-  }
+화면에 표시된 참가자 이름에는 다음처럼 여러 형태가 섞여 있을 수 있습니다.
+- "민유량" (사람 이름만)
+- "다울 본점 민유량" (대리점명 + 이름)
+- "18차수 다울 본점 민유량" (차수 + 대리점명 + 이름)
+- "다울본점_민유량", "다울본점-민유량" (구분자로 연결된 경우)
 
-  function normalizeKoreanName(raw){
-    let s = String(raw || '').trim();
-    s = s.replace(/의\s*(iPad|iPhone|Galaxy|Android|Phone|PC|Mac).*$/i, '');
-    s = s.replace(/[^\uAC00-\uD7A3]/g, '');
-    return /^[가-힣]{2,4}$/.test(s) ? s : '';
-  }
+이 중 사람의 실제 이름만 name에, 대리점/매장/지점명만 affiliation에 담으세요.
+차수·기수·날짜·숫자만 있는 조각·괄호 안 부가정보처럼 사람 이름도 대리점명도 아닌 나머지 텍스트는
+name과 affiliation 어디에도 넣지 말고 버리세요. 특히 "차수"라는 글자가 포함된 부분은
+그 교육생의 것이 아니라 교육과정 전체의 차수 정보이므로 절대 name이나 affiliation에 포함하지 마세요.
+대리점명을 구분할 수 없으면 affiliation은 빈 문자열로 두세요.
 
-  function looksLikeUiLine(line){
-    const compact = line.replace(/\s/g,'');
-    if(!compact) return true;
-    if(/^\d{1,2}[:.]\d{2}/.test(line)) return true;
-    if(/^\d+%?$/.test(compact)) return true;
-    for(const w of OCR_STOPWORDS){
-      if(compact === String(w).replace(/\s/g,'')) return true;
-    }
-    if(/참가자|대기실|모두\s*음소거|화면\s*공유|회의\s*종료|오디오|비디오/i.test(line)) return true;
-    return false;
-  }
+화면 상단의 회의 주제/제목 텍스트에서 다음을 분리해서 읽어주세요. 확실하지 않으면 null로 두세요.
+- courseName: 교육과정명 (예: "[부산] 유선인증과정 BOOST(8월)")
+- session: 차수 (예: 제목에 "18차수"가 있으면 "18", 없으면 null)
+- schedule: 진행 일정/날짜. 화면에 보이는 회의 날짜나 시작 시각(예: "2026-08-12" 또는 "08/12/2026")을 그대로 옮겨 적으세요.
 
-  function extractCourseMeta(text){
-    const lines = String(text || '').split(/\r?\n/).map(cleanOcrLine).filter(Boolean);
-    let courseName = '';
-    let session = '';
-    let schedule = '';
-
-    for(const line of lines){
-      if(!session){
-        const m = line.match(/(\d{1,3})\s*차수/);
-        if(m) session = m[1];
+{
+  "courseName": "교육과정명 (없으면 null)",
+  "session": "차수 (없으면 null)",
+  "schedule": "진행 일정/날짜 (없으면 null)",
+  "students": [
+    {"name": "사람 이름만 (차수·소속 제외)", "affiliation": "대리점명만 (차수 제외)", "joinTime": "", "leaveTime": "", "durationMin": ""}
+  ]
+}`;
+    const headers = {'Content-Type':'application/json'};
+    // Claude 아티팩트 안에서만 통하는 특수 모델 별칭과, 사용자가 직접 발급받은 키로
+    // 실제 공개 API를 호출할 때 써야 하는 모델명이 다르다.
+    let model = 'claude-sonnet-4-6';
+    // Claude 아티팩트 환경 밖(독립 배포)에서는 이 앱이 직접 Anthropic API를 호출해야 하므로
+    // 사용자가 설정에 등록해둔 본인의 API 키를 붙인다.
+    if(!HAS_CLAUDE_STORAGE){
+      const apiKey = (window.localStorage.getItem('anthropic-api-key')||'').trim();
+      if(!apiKey){
+        const err = new Error('API_KEY_MISSING');
+        err.code = 'API_KEY_MISSING';
+        throw err;
       }
-      if(!schedule){
-        const d = line.match(/(20\d{2}[.\-/]\s*\d{1,2}[.\-/]\s*\d{1,2}|\d{1,2}[.\-/]\s*\d{1,2}[.\-/]\s*20\d{2})/);
-        if(d) schedule = d[1].replace(/\s/g,'');
-      }
+      headers['x-api-key'] = apiKey;
+      headers['anthropic-version'] = '2023-06-01';
+      headers['anthropic-dangerous-direct-browser-access'] = 'true';
+      model = 'claude-sonnet-5'; // 실제 공개 API에 존재하는 모델명
     }
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers,
+      body: JSON.stringify({
+        model,
+        max_tokens:2500,
+        messages:[{
+          role:'user',
+          content:[
+            {type:'image', source:{type:'base64', media_type: mediaType, data: base64}},
+            {type:'text', text: prompt}
+          ]
+        }]
+      })
+    });
+    let data;
+    try{ data = await resp.json(); }
+    catch(e){ throw new Error('서버 응답을 읽지 못했습니다'); }
 
-    const titleCandidate = lines.find(line =>
-      /교육|과정|BOOST|부산|대구|유선|인증|NPS|Btv|max/i.test(line) &&
-      !looksLikeUiLine(line) &&
-      line.length >= 5
-    );
-    if(titleCandidate){
-      courseName = titleCandidate.replace(/\d{1,3}\s*차수.*$/,'').trim();
+    if(!resp.ok){
+      const msg = (data && data.error && data.error.message) ? data.error.message : `요청이 실패했습니다 (상태 코드 ${resp.status})`;
+      throw new Error(msg);
     }
-    return {courseName, session, schedule};
-  }
+    const block = (data.content||[]).find(b=>b.type==='text');
+    if(!block || !block.text){ throw new Error('모델이 빈 응답을 반환했습니다'); }
 
-  function parseStudentsFromOcr(text){
-    const lines = String(text || '')
-      .split(/\r?\n/)
-      .map(cleanOcrLine)
-      .filter(Boolean);
-
-    const byName = new Map();
-
-    for(let line of lines){
-      if(looksLikeUiLine(line)) continue;
-
-      // 시간/상태 문자열 제거
-      line = line
-        .replace(/\b\d{1,2}:\d{2}(?::\d{2})?\b/g,' ')
-        .replace(/\b\d+\s*(분|초|minutes?|mins?)\b/gi,' ')
-        .replace(/\b(예|아니오|Yes|No)\b/gi,' ')
-        .replace(/\s+/g,' ')
-        .trim();
-
-      if(!line) continue;
-
-      // "(문혜인의 iPad)" 같은 기기명은 제거하되, 이름 추출에 참고한다.
-      const deviceMatch = line.match(/([가-힣]{2,4})의\s*(?:iPad|iPhone|Galaxy|Android|Phone|PC|Mac)/i);
-      let name = deviceMatch ? normalizeKoreanName(deviceMatch[1]) : '';
-
-      const noParen = line.replace(/\([^)]*\)/g,' ').replace(/\[[^\]]*\]/g,' ').replace(/\s+/g,' ').trim();
-
-      if(!name){
-        // 맨 뒤쪽의 2~4글자 한글 이름 후보를 우선 선택
-        const tokens = noParen.split(/\s+/);
-        for(let i=tokens.length-1; i>=0; i--){
-          const cand = normalizeKoreanName(tokens[i]);
-          if(!cand) continue;
-          if(OCR_STOPWORDS.has(cand)) continue;
-          if(/점$/.test(cand) && cand.length <= 3) continue;
-          if(/대리점|본점|지점|센터|교육|강사|참가자/.test(cand)) continue;
-          name = cand;
-          break;
-        }
-      }
-
-      if(!name) continue;
-
-      // 소속은 이름 앞의 텍스트를 사용
-      let affiliation = noParen;
-      const idx = affiliation.lastIndexOf(name);
-      if(idx >= 0) affiliation = affiliation.slice(0, idx).trim();
-      affiliation = affiliation
-        .replace(/^[\-\d.\s]+/,'')
-        .replace(/\b(호스트|Host|HOST)\b/gi,'')
-        .replace(/\s+/g,' ')
-        .trim();
-
-      // 강사 계정 제외
-      if(/강사|SIA/i.test(line) || /강사|SIA/i.test(affiliation)) continue;
-
-      // OCR이 UI 단어를 이름으로 잘못 잡는 경우 최소 필터
-      if(['참가자','대기실','교육생','회의실','본점','지점'].includes(name)) continue;
-
-      if(!byName.has(name)){
-        byName.set(name, {
-          name,
-          affiliation,
-          joinTime:'',
-          leaveTime:'',
-          durationMin:''
-        });
-      }else if(!byName.get(name).affiliation && affiliation){
-        byName.get(name).affiliation = affiliation;
-      }
+    // 모델이 코드블록이나 부연 설명을 덧붙이는 경우까지 방어적으로 처리 —
+    // 텍스트 안에서 가장 바깥쪽 { ... } 구간만 뽑아서 파싱한다.
+    const start = block.text.indexOf('{');
+    const end = block.text.lastIndexOf('}');
+    if(start === -1 || end === -1 || end < start){
+      throw new Error('응답에서 인식 결과를 찾지 못했습니다');
     }
-
-    return Array.from(byName.values());
-  }
-
-  async function extractFromImage(base64, mediaType, onProgress){
-    if(typeof Tesseract === 'undefined'){
-      throw new Error('문자인식 프로그램을 불러오지 못했습니다. 인터넷 연결 또는 회사 보안망에서 jsDelivr 접속이 가능한지 확인해주세요.');
-    }
-
-    const dataUrl = `data:${mediaType || 'image/jpeg'};base64,${base64}`;
-    let result;
+    const jsonSlice = block.text.slice(start, end+1);
     try{
-      result = await Tesseract.recognize(dataUrl, 'kor+eng', {
-        logger: m=>{
-          if(typeof onProgress === 'function'){
-            const pct = typeof m.progress === 'number' ? Math.round(m.progress * 100) : null;
-            const statusMap = {
-              'loading tesseract core':'문자인식 엔진 준비 중',
-              'initializing tesseract':'문자인식 엔진 초기화 중',
-              'loading language traineddata':'한글 인식 데이터 불러오는 중',
-              'initializing api':'한글 인식 준비 중',
-              'recognizing text':'사진의 글자 읽는 중'
-            };
-            onProgress(statusMap[m.status] || '사진 분석 중', pct);
-          }
-        }
-      });
+      return JSON.parse(jsonSlice);
     }catch(e){
-      console.error('Browser OCR error:', e);
-      throw new Error('사진 문자인식에 실패했습니다. 인터넷 연결을 확인하고, 가능하면 화면 캡처 이미지를 다시 올려주세요.');
+      throw new Error('인식 결과 형식이 올바르지 않습니다');
     }
-
-    const text = result?.data?.text || '';
-    if(!text.trim()){
-      throw new Error('사진에서 글자를 읽지 못했습니다. 글자가 크게 보이도록 화면을 캡처해서 다시 시도해주세요.');
-    }
-
-    const students = parseStudentsFromOcr(text);
-    const meta = extractCourseMeta(text);
-
-    if(students.length === 0){
-      throw new Error('교육생 이름을 자동으로 찾지 못했습니다. 아래의 "사진 없이 직접 입력"을 눌러 입력하거나, 이름이 크게 보이는 캡처로 다시 시도해주세요.');
-    }
-
-    return {
-      courseName: meta.courseName || '',
-      session: meta.session || '',
-      schedule: meta.schedule || '',
-      students,
-      _ocrText: text
-    };
   }
 
   // 카메라 원본 사진은 용량이 크고 일부 폰은 HEIC 등 API가 지원하지 않는 포맷으로 찍히므로,
@@ -507,15 +422,17 @@
           <div class="brand-mark">✓</div>
           <div>
             <div class="brand-title">천하무적동부교육팀<br>교육생 만족도 체크</div>
-            <div class="brand-sub">Zoom 캡처 · 모바일/PC 공용</div>
+            <div class="brand-sub">Zoom 캡처 한 장으로 등록</div>
           </div>
         </div>
-        <span class="badge badge-done">WEB</span>
+        ${HAS_CLAUDE_STORAGE ? '' : '<button class="btn-ghost btn-sm" id="settings-btn">⚙️ 설정</button>'}
       </div>
       <button class="btn btn-amber" id="new-btn">＋ Zoom 화면 사진으로 새 출석 등록</button>
       <div class="card" style="margin-top:16px;padding:10px 6px;" id="list-wrap"></div>
     `;
     document.getElementById('new-btn').onclick = ()=> renderUpload();
+    const settingsBtn = document.getElementById('settings-btn');
+    if(settingsBtn) settingsBtn.onclick = ()=> renderSettings();
     const wrap = document.getElementById('list-wrap');
     wrap.innerHTML = `<div class="loading-wrap"><div class="spin"></div>불러오는 중...</div>`;
     const idx = await getIndex();
@@ -549,7 +466,7 @@
         <div id="upload-zone" class="upload-zone">
           <div class="upload-icon">📷</div>
           <div class="upload-txt">사진 촬영 또는 이미지 선택</div>
-          <div class="upload-sub">회의 종료 후 참가자 이름이 크게 보이도록 캡처해주세요</div>
+          <div class="upload-sub">회의 종료 후 참가자 목록 화면을 찍어주세요</div>
         </div>
         <input type="file" id="file-input" accept="image/*" style="display:none;">
         <div id="result-zone"></div>
@@ -576,10 +493,7 @@
       zone.innerHTML = `<img class="preview-img" src="${norm.dataUrl}">`;
       resultZone.innerHTML = `<div class="loading-wrap"><div class="spin"></div>사진에서 이름·시간 인식 중...</div>`;
       try{
-        const parsed = await extractFromImage(norm.base64, norm.mediaType, (status,pct)=>{
-          resultZone.innerHTML = `<div class="loading-wrap"><div class="spin"></div>${esc(status)}${pct!==null?` ${pct}%`:''}</div>
-            <div class="hint" style="text-align:center;">첫 사용 시 한글 문자인식 데이터를 불러오느라 조금 더 걸릴 수 있습니다.</div>`;
-        });
+        const parsed = await extractFromImage(norm.base64, norm.mediaType);
         draftStudents = (parsed.students||[]).map(s=>({
           id: uid(), name: s.name||'', affiliation: s.affiliation||'', joinTime: s.joinTime||'', leaveTime: s.leaveTime||'',
           durationMin: s.durationMin||'', score:null, reason:''
@@ -590,6 +504,19 @@
           schedule: parsed.schedule || ''
         });
       }catch(err){
+        if(err.code === 'API_KEY_MISSING'){
+          resultZone.innerHTML = `<div class="hint" style="color:var(--red);">사진 인식을 사용하려면 먼저 Anthropic API 키를 등록해야 합니다.</div>
+            <div class="row" style="margin-top:10px;">
+              <button class="btn btn-primary btn-sm" id="goto-settings-btn">API 키 등록하기</button>
+              <button class="btn btn-outline btn-sm" id="manual-btn">사진 없이 직접 입력</button>
+            </div>`;
+          document.getElementById('goto-settings-btn').onclick = ()=> renderSettings();
+          document.getElementById('manual-btn').onclick = ()=>{
+            draftStudents = [];
+            renderDraftEditor({courseName:'', session:'', schedule:''});
+          };
+          return;
+        }
         resultZone.innerHTML = `<div class="hint" style="color:var(--red);">인식에 실패했습니다: ${esc(err.message || '알 수 없는 오류')}</div>
           <div class="row" style="margin-top:10px;">
             <button class="btn btn-outline btn-sm" id="retry-btn">다시 촬영/선택</button>
@@ -601,6 +528,40 @@
           renderDraftEditor({courseName:'', session:'', schedule:''});
         };
       }
+    };
+  }
+
+  // ---------- render: settings (API key) — 독립 배포 환경에서만 노출 ----------
+  function renderSettings(){
+    const saved = (window.localStorage.getItem('anthropic-api-key')||'');
+    shell.innerHTML = `
+      <div class="topbar">
+        <button class="back-btn" id="back-btn">← 목록</button>
+      </div>
+      <div class="card">
+        <label class="field-label" style="margin-top:0;">Anthropic API 키</label>
+        <input type="text" id="key-input" value="${esc(saved)}" placeholder="sk-ant-...">
+        <div class="hint">
+          이 키는 서버로 전송되지 않고 이 브라우저(이 기기)에만 저장되며, 사진에서 이름·시간을 자동으로 읽는 기능에만 사용됩니다.
+          <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener" style="color:var(--navy);font-weight:700;">console.anthropic.com</a>에서 발급받을 수 있습니다.
+        </div>
+        <button class="btn btn-primary" id="save-key-btn" style="margin-top:16px;">저장</button>
+        ${saved? '<button class="btn btn-outline" id="clear-key-btn" style="margin-top:8px;">키 삭제</button>' : ''}
+      </div>
+    `;
+    document.getElementById('back-btn').onclick = ()=> renderList();
+    document.getElementById('save-key-btn').onclick = ()=>{
+      const v = document.getElementById('key-input').value.trim();
+      if(v===''){ toast('API 키를 입력해주세요'); return; }
+      window.localStorage.setItem('anthropic-api-key', v);
+      toast('저장되었습니다');
+      renderList();
+    };
+    const clearBtn = document.getElementById('clear-key-btn');
+    if(clearBtn) clearBtn.onclick = ()=>{
+      window.localStorage.removeItem('anthropic-api-key');
+      toast('삭제되었습니다');
+      renderSettings();
     };
   }
 
@@ -669,7 +630,7 @@
     wrap.innerHTML = draftStudents.map((s,i)=>`
       <div class="student-row" data-i="${i}">
         <input type="text" class="dn" value="${esc(s.name)}" placeholder="이름">
-        <input type="text" class="da" value="${esc(s.affiliation)}" placeholder="소속">
+        <input type="text" class="da" value="${esc(s.affiliation)}" placeholder="대리점명">
         <input type="text" class="dt" value="${esc(s.durationMin)}" placeholder="분" style="max-width:48px;flex:none;">
         <button class="rm-btn" data-rm="${i}">✕</button>
       </div>
@@ -786,7 +747,7 @@
         <div class="sc-head">
           <div style="flex:1;min-width:0;">
             <div class="sc-name">${esc(st.name)}</div>
-            <input type="text" class="sc-affil" value="${esc(st.affiliation)}" placeholder="소속 (예: 다울 본점)">
+            <input type="text" class="sc-affil" value="${esc(st.affiliation)}" placeholder="대리점명 (예: 다울 본점)">
           </div>
           <div class="sc-time">${esc(st.durationMin)?esc(st.durationMin)+'분 참여':''}</div>
         </div>
@@ -824,74 +785,18 @@
   function exportXlsx(){
     const s = currentSession;
     const fileBase = buildFileBase(s);
-
-    // 서버 없이 Excel이 직접 열 수 있는 HTML 기반 .xls 파일을 만듭니다.
-    const rows = s.students.map(st=>`
-      <tr>
-        <td>${esc(st.name||'')}</td>
-        <td>${esc(st.affiliation||'')}</td>
-        <td>${esc(st.joinTime||'')}</td>
-        <td>${esc(st.leaveTime||'')}</td>
-        <td>${esc(st.durationMin||'')}</td>
-        <td>${st.score===null||st.score===undefined?'':esc(st.score)}</td>
-        <td>${esc(st.reason||'')}</td>
-      </tr>`).join('');
-
-    const excelHtml = `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<style>
-table{border-collapse:collapse;font-family:"Malgun Gothic",sans-serif;font-size:11pt}
-th,td{border:1px solid #999;padding:6px 8px;vertical-align:top}
-th{font-weight:bold;background:#e9ecff}
-.title{font-size:15pt;font-weight:bold}
-.meta{font-size:10pt}
-</style>
-</head>
-<body>
-<div class="title">${esc(s.title||fileBase)}</div>
-<div class="meta">${esc(s.date||'')}${s.instructor?' · 담당 강사: '+esc(s.instructor):''}</div>
-<br>
-<table>
-<thead><tr>
-<th>이름</th><th>소속</th><th>참가시간</th><th>나간시간</th><th>참여시간(분)</th><th>점수</th><th>사유</th>
-</tr></thead>
-<tbody>${rows}</tbody>
-</table>
-</body>
-</html>`;
-
-    const blob = new Blob(['\uFEFF', excelHtml], {type:'application/vnd.ms-excel;charset=utf-8'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${fileBase}.xls`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url), 1500);
-    toast('Excel 파일이 저장되었습니다');
-  }
-
-  function csvEscape(v){
-    const s = (v===undefined||v===null?'':String(v));
-    return '"'+s.replace(/"/g,'""')+'"';
-  }
-  function exportCsvFallback(){
-    const s = currentSession;
-    const fileBase = buildFileBase(s);
     const rows = [
-      ['이름','소속','참가시간','나간시간','참여시간(분)','점수','사유'],
+      [fileBase],
+      [`${s.date || ''}${s.instructor? '  ·  담당 강사: '+s.instructor : ''}`],
+      [],
+      ['이름','대리점명','참가시간','나간시간','참여시간(분)','점수','사유'],
       ...s.students.map(st=>[st.name, st.affiliation, st.joinTime, st.leaveTime, st.durationMin, st.score, st.reason])
     ];
-    const csv = '\uFEFF' + rows.map(r=>r.map(csvEscape).join(',')).join('\r\n');
-    const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href=url; a.download=`${fileBase}.csv`;
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url), 1500);
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{wch:14},{wch:16},{wch:14},{wch:14},{wch:12},{wch:8},{wch:36}];
+    XLSX.utils.book_append_sheet(wb, ws, '출석및태도');
+    XLSX.writeFile(wb, `${fileBase}.xlsx`);
   }
 
   // ---------- export: image (drawn directly on canvas, no external lib) ----------
@@ -974,7 +879,7 @@ th{font-weight:bold;background:#e9ecff}
     ctx.fillStyle = '#FFFFFF';
     ctx.font = '700 12px -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
     ctx.fillText('이름', PAD+10, y+20);
-    ctx.fillText('소속', PAD+colName+10, y+20);
+    ctx.fillText('대리점명', PAD+colName+10, y+20);
     ctx.fillText('참여시간', PAD+colName+colAffil+10, y+20);
     ctx.fillText('점수', PAD+colName+colAffil+colDur+10, y+20);
     ctx.fillText('사유', PAD+colName+colAffil+colDur+colScore+10, y+20);
