@@ -173,7 +173,7 @@
 </style>
 </head>
 <body>
-<div style="position:fixed;right:10px;bottom:10px;z-index:99999;background:#111827;color:#fff;padding:7px 10px;border-radius:999px;font:700 11px/1.2 -apple-system,BlinkMacSystemFont,'Malgun Gothic',sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.18);">V10.3 · 공유링크 API 404 수정</div>
+<div style="position:fixed;right:10px;bottom:10px;z-index:99999;background:#111827;color:#fff;padding:7px 10px;border-radius:999px;font:700 11px/1.2 -apple-system,BlinkMacSystemFont,'Malgun Gothic',sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.18);">V11 · 서버 404 제거 · Claude 직접인식</div>
 
 <div id="app-root">
   <div class="shell" id="shell"></div>
@@ -182,7 +182,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <script>
-console.log('attendance-app V10.3 - propagating _vercel_share to API requests');
 (function(){
   try{ document.title = '천하무적동부교육팀 교육생 만족도 체크'; }catch(e){}
   const shell = document.getElementById('shell');
@@ -268,77 +267,20 @@ console.log('attendance-app V10.3 - propagating _vercel_share to API requests');
     }catch(e){ console.error('delete fail', e); }
   }
 
-  function canonical(v){
-    return String(v||'')
-      .toLowerCase()
-      .replace(/\s+/g,'')
-      .replace(/[()[\]{}_\-.,:;/'"\\]/g,'')
-      .trim();
+  function simpleKey(v){
+    return String(v||'').toLowerCase().replace(/\s+/g,'').replace(/[.\-_/()[\]{}]/g,'');
   }
 
-  function studentKey(st){
-    return [
-      canonical(st.affiliation),
-      canonical(st.storeName),
-      canonical(st.name)
-    ].join('|');
-  }
-
-  function mergeStudents(baseStudents, newStudents){
-    const map = new Map();
-
-    for(const raw of [...(baseStudents||[]), ...(newStudents||[])]){
-      const st = {
-        id:raw.id || uid(),
-        name:String(raw.name||'').trim(),
-        affiliation:String(raw.affiliation||'').trim(),
-        storeName:String(raw.storeName||'').trim(),
-        joinTime:'',
-        leaveTime:'',
-        durationMin:raw.durationMin||'',
-        score:raw.score===undefined ? null : raw.score,
-        reason:raw.reason||''
-      };
-
-      if(!st.name) continue;
-
-      let key = studentKey(st);
-      if(!st.affiliation){
-        key = `|${canonical(st.storeName)}|${canonical(st.name)}`;
-      }
-
-      if(!map.has(key)){
-        map.set(key, st);
-      }else{
-        const old = map.get(key);
-        old.affiliation = old.affiliation || st.affiliation;
-        old.storeName = old.storeName || st.storeName;
-        old.durationMin = old.durationMin || st.durationMin;
-        old.score = (old.score!==null && old.score!=='') ? old.score : st.score;
-        old.reason = old.reason || st.reason;
-      }
-    }
-
-    return Array.from(map.values());
-  }
-
-  function sessionKey(courseName, session, date){
-    return [canonical(courseName), canonical(session), canonical(date)].join('|');
-  }
-
-  async function findExistingSession(courseName, session, date){
-    const target = sessionKey(courseName, session, date);
+  async function findSameSession(courseName, session, date){
+    const target = [simpleKey(courseName), simpleKey(session), simpleKey(date)].join('|');
     const idx = await getIndex();
 
-    for(const entry of idx){
-      const s = await getSession(entry.id);
+    for(const item of idx){
+      const s = await getSession(item.id);
       if(!s) continue;
-
-      if(sessionKey(s.courseName||'', s.session||'', s.date||'') === target){
-        return s;
-      }
+      const key = [simpleKey(s.courseName||s.title), simpleKey(s.session), simpleKey(s.date)].join('|');
+      if(key === target) return s;
     }
-
     return null;
   }
 
@@ -354,42 +296,141 @@ console.log('attendance-app V10.3 - propagating _vercel_share to API requests');
   }
 
   // ---------- OCR via Claude vision ----------
-  function vercelApiUrl(path){
-    const url = new URL(path, window.location.origin);
-
-    // Vercel Shareable Link는 _vercel_share 쿼리로 보호된 배포에 접근합니다.
-    // 현재 페이지에 있는 공유 토큰을 API 요청에도 그대로 전달합니다.
-    const params = new URLSearchParams(window.location.search);
-    const shareToken = params.get('_vercel_share');
-
-    if(shareToken){
-      url.searchParams.set('_vercel_share', shareToken);
-    }
-
-    return url.pathname + url.search;
-  }
-
   async function extractFromImage(base64, mediaType){
-    const resp = await fetch(vercelApiUrl('/api/extract'), {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({base64, mediaType})
-    });
+    const prompt = `이 이미지는 기업 교육 운영 시스템의 '차수별 학습자 정보' 화면 또는 교육 참가자 명단 화면입니다.
+화면에 실제로 표시된 정보를 정확히 읽어 아래 JSON 형식으로만 응답하세요.
+설명, 마크다운, 코드블록은 절대 출력하지 말고 순수 JSON 객체 하나만 출력하세요.
 
-    let data;
-    try{
-      data = await resp.json();
-    }catch(e){
-      throw new Error(`사진 인식 서버 응답을 읽지 못했습니다. 상태 코드 ${resp.status}. 공유 링크 보호 토큰과 API 경로를 확인해주세요.`);
+[정확성 최우선]
+- 한글 이름과 매장명은 한 글자만 달라도 다른 정보입니다.
+- 비슷하게 생긴 자음/모음을 임의로 바꾸지 마세요.
+- 이름과 매장명은 화면 글자와 두 번 대조한 뒤 출력하세요.
+- 흐릿해서 확신이 없는 글자는 다른 글자로 추측해 교정하지 마세요.
+- 화면에 보이지 않는 내용을 만들어내지 마세요.
+
+[차수별 학습자 정보 표]
+교육생은 오직 '소속명 / 매장명 / 이름' 표의 실제 학습자 행만 읽으세요.
+
+다음 영역은 학습자 데이터가 아니므로 students에 절대 넣지 마세요.
+- 학습자 승인 현황
+- 신청: ○명 / 승인: ○명 / 취소·반려: ○명
+- 출석현황
+- 출석인원 / 등록학습자 / 미등록학습자
+- 학습자직접등록 / 학습자엑셀등록 / 차수변경 / 승인 / 반려 / 삭제 버튼
+- NO / 소속명 / 매장명 / 이름 같은 표 머리글
+
+[소속 affiliation]
+예:
+"대구마케팅담당 > 동대구마케팅팀 > 상상대리점" → "동대구"
+"대구마케팅담당 > 서대구마케팅팀 > 더블유대리점" → "서대구"
+"대구마케팅담당 > 경북마케팅팀 > 중앙SK대리점" → "경북"
+
+규칙:
+1. '○○마케팅담당'은 버립니다.
+2. '○○마케팅팀'에서 '마케팅팀'만 제거한 지역명만 affiliation에 넣습니다.
+3. 뒤에 나오는 대리점명은 affiliation에 넣지 않습니다.
+4. 확실히 구분되지 않으면 빈 문자열로 두세요.
+
+[매장명 storeName]
+- 반드시 표의 '매장명' 열에 보이는 셀 값을 사용하세요.
+- 소속명 열의 마지막 대리점명을 매장명 대신 사용하지 마세요.
+- 매장명은 화면에 보이는 전체 문자열을 축약하거나 교정하지 말고 그대로 옮기세요.
+- 예: '더블유대리점 동성로직영점'이면 정확히 그 문자열 그대로 출력하세요.
+
+[이름 name]
+- 반드시 표의 '이름' 열에 보이는 실제 사람 이름만 사용하세요.
+- 이름은 화면 글자를 한 글자씩 다시 확인하세요.
+- 다른 열의 텍스트를 이름으로 넣지 마세요.
+
+[교육과정 정보]
+화면에서 확인되는 경우에만 읽으세요. 확실하지 않으면 null:
+- courseName: 과정명
+- session: 차수 숫자만. 예: '32차수 (2026.08.20 ~ 2026.08.20)' → "32"
+- schedule: 날짜. 같은 날짜 범위면 해당 날짜, 범위가 다르면 시작일
+- instructor: 담당 강사. 화면에 없으면 null
+
+[참여 시간]
+- joinTime, leaveTime, durationMin은 자동 인식하지 마세요.
+- 세 값 모두 빈 문자열로 반환하세요.
+- 참여 시간은 사용자가 직접 입력합니다.
+
+[중복]
+- affiliation + storeName + name이 같은 동일 교육생은 한 번만 포함하세요.
+
+반드시 아래 구조만 출력하세요.
+{
+  "courseName": null,
+  "session": null,
+  "schedule": null,
+  "instructor": null,
+  "students": [
+    {
+      "affiliation": "동대구",
+      "storeName": "화면의 매장명 그대로",
+      "name": "화면의 이름 그대로",
+      "joinTime": "",
+      "leaveTime": "",
+      "durationMin": ""
     }
+  ]
+}`;
+    const headers = {'Content-Type':'application/json'};
+    // Claude 아티팩트 안에서만 통하는 특수 모델 별칭과, 사용자가 직접 발급받은 키로
+    // 실제 공개 API를 호출할 때 써야 하는 모델명이 다르다.
+    let model = 'claude-sonnet-4-6';
+    // Claude 아티팩트 환경 밖(독립 배포)에서는 이 앱이 직접 Anthropic API를 호출해야 하므로
+    // 사용자가 설정에 등록해둔 본인의 API 키를 붙인다.
+    if(!HAS_CLAUDE_STORAGE){
+      const apiKey = (window.localStorage.getItem('anthropic-api-key')||'').trim();
+      if(!apiKey){
+        const err = new Error('API_KEY_MISSING');
+        err.code = 'API_KEY_MISSING';
+        throw err;
+      }
+      headers['x-api-key'] = apiKey;
+      headers['anthropic-version'] = '2023-06-01';
+      headers['anthropic-dangerous-direct-browser-access'] = 'true';
+      model = 'claude-sonnet-5'; // 실제 공개 API에 존재하는 모델명
+    }
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers,
+      body: JSON.stringify({
+        model,
+        max_tokens:2500,
+        messages:[{
+          role:'user',
+          content:[
+            {type:'image', source:{type:'base64', media_type: mediaType, data: base64}},
+            {type:'text', text: prompt}
+          ]
+        }]
+      })
+    });
+    let data;
+    try{ data = await resp.json(); }
+    catch(e){ throw new Error('서버 응답을 읽지 못했습니다'); }
 
     if(!resp.ok){
-      const err = new Error(data?.message || data?.error || `사진 인식 요청 실패 (${resp.status})`);
-      err.code = data?.code || 'VISION_ERROR';
-      throw err;
+      const msg = (data && data.error && data.error.message) ? data.error.message : `요청이 실패했습니다 (상태 코드 ${resp.status})`;
+      throw new Error(msg);
     }
+    const block = (data.content||[]).find(b=>b.type==='text');
+    if(!block || !block.text){ throw new Error('모델이 빈 응답을 반환했습니다'); }
 
-    return data;
+    // 모델이 코드블록이나 부연 설명을 덧붙이는 경우까지 방어적으로 처리 —
+    // 텍스트 안에서 가장 바깥쪽 { ... } 구간만 뽑아서 파싱한다.
+    const start = block.text.indexOf('{');
+    const end = block.text.lastIndexOf('}');
+    if(start === -1 || end === -1 || end < start){
+      throw new Error('응답에서 인식 결과를 찾지 못했습니다');
+    }
+    const jsonSlice = block.text.slice(start, end+1);
+    try{
+      return JSON.parse(jsonSlice);
+    }catch(e){
+      throw new Error('인식 결과 형식이 올바르지 않습니다');
+    }
   }
 
   // 카메라 원본 사진은 용량이 크고 일부 폰은 HEIC 등 API가 지원하지 않는 포맷으로 찍히므로,
@@ -397,82 +438,53 @@ console.log('attendance-app V10.3 - propagating _vercel_share to API requests');
   // blob: URL은 이 앱이 실행되는 샌드박스에서 막힐 수 있어, FileReader로 읽은 data: URL만 사용한다.
   function normalizeImage(file){
     const isHeic = /heic|heif/i.test(file.type||'') || /\.(heic|heif)$/i.test(file.name||'');
-
     return new Promise((resolve, reject)=>{
       const reader = new FileReader();
       reader.onerror = ()=> reject(new Error('사진 파일을 읽는 중 문제가 발생했습니다. 다른 사진으로 다시 시도해주세요.'));
-
       reader.onload = ()=>{
         const rawDataUrl = reader.result;
         const img = new Image();
-
         img.onload = ()=>{
           try{
             const MAX_DIM = 2200;
-            let {width, height} = img;
-
+            let { width, height } = img;
             if(width===0 || height===0){
               reject(new Error('사진 크기를 읽을 수 없습니다. 다른 사진으로 다시 시도해주세요.'));
               return;
             }
-
             if(width > MAX_DIM || height > MAX_DIM){
               const ratio = Math.min(MAX_DIM/width, MAX_DIM/height);
               width = Math.round(width*ratio);
               height = Math.round(height*ratio);
             }
-
             const canvas = document.createElement('canvas');
-            canvas.width = width;
-            canvas.height = height;
-
+            canvas.width = width; canvas.height = height;
             const ctx = canvas.getContext('2d');
             ctx.fillStyle = '#fff';
             ctx.fillRect(0,0,width,height);
-            ctx.imageSmoothingEnabled = true;
-            ctx.imageSmoothingQuality = 'high';
-            ctx.drawImage(img, 0,0,width,height);
-
-            // 인식 정확도가 좋았던 94%를 기본값으로 그대로 유지한다.
-            const qualities = [0.94, 0.92, 0.90, 0.88, 0.86];
-            let chosen = null;
-
-            for(const q of qualities){
-              const dataUrl = canvas.toDataURL('image/jpeg', q);
-              const base64 = dataUrl.split(',')[1];
-
-              // Vercel Function 요청 4.5MB 제한에 걸리지 않도록 충분한 여유 확보
-              if(base64.length <= 3600000 || q===qualities[qualities.length-1]){
-                chosen = {base64, mediaType:'image/jpeg', dataUrl, quality:q};
-                break;
-              }
-            }
-
-            resolve(chosen);
-
+            ctx.drawImage(img, 0, 0, width, height);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.94);
+            resolve({ base64: dataUrl.split(',')[1], mediaType: 'image/jpeg', dataUrl });
           }catch(e){
             reject(new Error('사진을 처리하지 못했습니다. 다른 사진으로 다시 시도해주세요.'));
           }
         };
-
         img.onerror = ()=>{
           if(isHeic){
-            reject(new Error('HEIC 형식 사진은 이 브라우저에서 열 수 없습니다. JPG/PNG 또는 화면 캡처 이미지를 사용해주세요.'));
+            reject(new Error('HEIC 형식 사진은 이 브라우저에서 열 수 없습니다. 아이폰 설정 > 카메라 > 형식을 "호환성 우선"으로 바꾸거나, 사진 갤러리에서 이미 저장된 사진(또는 스크린샷)을 선택해 다시 시도해주세요.'));
           }else{
             reject(new Error('사진을 불러오지 못했습니다. 다른 사진으로 다시 시도해주세요.'));
           }
         };
-
         img.src = rawDataUrl;
       };
-
       reader.readAsDataURL(file);
     });
   }
 
   // ---------- render: list view ----------
   async function renderList(){
-    const needsKey = false;
+    const needsKey = !HAS_CLAUDE_STORAGE && !(window.localStorage.getItem('anthropic-api-key')||'').trim();
     shell.innerHTML = `
       <div class="topbar">
         <div class="brand">
@@ -482,14 +494,14 @@ console.log('attendance-app V10.3 - propagating _vercel_share to API requests');
             <div class="brand-sub">Zoom 캡처 한 장으로 등록</div>
           </div>
         </div>
-        
+        ${HAS_CLAUDE_STORAGE ? '' : '<button class="btn-ghost btn-sm" id="settings-btn">⚙️ 설정</button>'}
       </div>
       ${needsKey ? `
       <div class="card" style="background:#FFFBEB;border-color:#FDE68A;margin-bottom:14px;">
         <div style="font-size:13.5px;font-weight:800;color:#92400E;">사진 인식을 쓰려면 API 키 등록이 필요합니다</div>
         <div class="hint" style="color:#92400E;margin-top:4px;">
           이 사이트는 Claude 화면 밖(독립 배포)에서 열려 있어, 사진에서 이름을 자동으로 읽으려면
-          본인의 Anthropic API 키를 한 번 등록해야 합니다. 등록하지 않아도 명단 수동 입력·점수 기록·엑셀 내보내기는 그대로 쓸 수 있습니다.
+          본인의 Anthropic API 키 (최초 1회)를 한 번 등록해야 합니다. 등록하지 않아도 명단 수동 입력·점수 기록·엑셀 내보내기는 그대로 쓸 수 있습니다.
         </div>
         <button class="btn btn-primary" id="banner-settings-btn" style="margin-top:10px;">지금 등록하기</button>
       </div>` : ''}
@@ -562,17 +574,23 @@ console.log('attendance-app V10.3 - propagating _vercel_share to API requests');
       resultZone.innerHTML = `<div class="loading-wrap"><div class="spin"></div>사진에서 과정 정보와 학습자 명단을 정밀 인식 중...</div>`;
       try{
         const parsed = await extractFromImage(norm.base64, norm.mediaType);
-        draftStudents = mergeStudents([], (parsed.students||[]).map(s=>({
-          id:uid(),
-          name:s.name||'',
-          affiliation:s.affiliation||'',
-          storeName:s.storeName||'',
+        const seenStudents = new Set();
+        draftStudents = (parsed.students||[]).map(s=>({
+          id: uid(),
+          name: s.name||'',
+          affiliation: s.affiliation||'',
+          storeName: s.storeName||'',
           joinTime:'',
           leaveTime:'',
           durationMin:'',
           score:null,
           reason:''
-        })));
+        })).filter(s=>{
+          const key = [s.affiliation,s.storeName,s.name].join('|').replace(/\s+/g,'');
+          if(!s.name || seenStudents.has(key)) return false;
+          seenStudents.add(key);
+          return true;
+        });
         renderDraftEditor({
           courseName: parsed.courseName || '',
           session: parsed.session || '',
@@ -581,7 +599,7 @@ console.log('attendance-app V10.3 - propagating _vercel_share to API requests');
         });
       }catch(err){
         if(err.code === 'API_KEY_MISSING'){
-          resultZone.innerHTML = `<div class="hint" style="color:var(--red);">사진 인식을 사용하려면 먼저 Anthropic API 키를 등록해야 합니다.</div>
+          resultZone.innerHTML = `<div class="hint" style="color:var(--red);">사진 인식을 사용하려면 먼저 Anthropic API 키 (최초 1회)를 등록해야 합니다.</div>
             <div class="row" style="margin-top:10px;">
               <button class="btn btn-primary btn-sm" id="goto-settings-btn">API 키 등록하기</button>
               <button class="btn btn-outline btn-sm" id="manual-btn">사진 없이 직접 입력</button>
@@ -594,7 +612,6 @@ console.log('attendance-app V10.3 - propagating _vercel_share to API requests');
           return;
         }
         resultZone.innerHTML = `<div class="hint" style="color:var(--red);">인식에 실패했습니다: ${esc(err.message || '알 수 없는 오류')}</div>
-          ${err.code==='SERVER_API_KEY_MISSING' ? '<div class="hint" style="margin-top:6px;">Vercel 프로젝트의 환경 변수에 ANTHROPIC_API_KEY를 등록한 뒤 재배포해주세요.</div>' : ''}
           <div class="row" style="margin-top:10px;">
             <button class="btn btn-outline btn-sm" id="retry-btn">다시 촬영/선택</button>
             <button class="btn btn-outline btn-sm" id="manual-btn">사진 없이 직접 입력</button>
@@ -616,7 +633,7 @@ console.log('attendance-app V10.3 - propagating _vercel_share to API requests');
         <button class="back-btn" id="back-btn">← 목록</button>
       </div>
       <div class="card">
-        <label class="field-label" style="margin-top:0;">Anthropic API 키</label>
+        <label class="field-label" style="margin-top:0;">Anthropic API 키 (최초 1회)</label>
         <input type="text" id="key-input" value="${esc(saved)}" placeholder="sk-ant-...">
         <div class="hint">
           이 키는 서버로 전송되지 않고 이 브라우저(이 기기)에만 저장되며, 사진에서 이름·시간을 자동으로 읽는 기능에만 사용됩니다.
@@ -656,7 +673,7 @@ console.log('attendance-app V10.3 - propagating _vercel_share to API requests');
       <label class="field-label">3. 교육생 정보 확인 (${draftStudents.length}명) — 소속 · 매장명 · 이름 · 참여 시간</label>
       <div id="draft-list"></div>
       <button class="btn btn-outline btn-sm" id="add-row-btn" style="margin-top:4px;">+ 교육생 수동 추가</button>
-      <div class="hint">소속·매장명·이름은 이미지에서 자동 입력됩니다. 참여 시간(분)은 직접 입력해주세요. 저장 전에 모든 값을 수정할 수 있습니다.</div>
+      <div class="hint">소속·매장명·이름은 사진에서 자동 입력됩니다. 참여 시간(분)은 직접 입력해주세요. 저장 전 모든 항목을 직접 수정할 수 있습니다.</div>
       <button class="btn btn-primary" id="save-draft-btn" style="margin-top:16px;">이 명단으로 저장하기</button>
     `;
     renderDraftRows();
@@ -670,18 +687,27 @@ console.log('attendance-app V10.3 - propagating _vercel_share to API requests');
       const schedule = document.getElementById('schedule-input').value.trim() || todayStr;
       const instructor = document.getElementById('instructor-input').value.trim();
       if(courseName===''){ toast('교육과정명을 입력해주세요'); return; }
-      const cleaned = mergeStudents([], draftStudents.filter(s=>String(s.name||'').trim()!==''));
+      const cleaned = draftStudents.filter(s=>String(s.name||'').trim()!=='');
       if(cleaned.length===0){ toast('교육생을 최소 1명 입력해주세요'); return; }
 
-      let sess = await findExistingSession(courseName, session, schedule);
+      let sess = await findSameSession(courseName, session, schedule);
 
       if(sess){
+        const existingKeys = new Set((sess.students||[]).map(s=>[s.affiliation,s.storeName,s.name].join('|').replace(/\s+/g,'')));
+
+        for(const st of cleaned){
+          const key = [st.affiliation,st.storeName,st.name].join('|').replace(/\s+/g,'');
+          if(!existingKeys.has(key)){
+            sess.students.push(st);
+            existingKeys.add(key);
+          }
+        }
+
         sess.courseName = courseName;
         sess.session = session;
         sess.instructor = instructor || sess.instructor || '';
         sess.title = buildTitle(courseName, session);
         sess.date = schedule;
-        sess.students = mergeStudents(sess.students || [], cleaned);
 
         const ok = await saveSession(sess);
         toast(ok? '기존 차수에 중복 없이 명단을 반영했습니다.' : '저장에 실패했습니다');
@@ -689,16 +715,7 @@ console.log('attendance-app V10.3 - propagating _vercel_share to API requests');
         return;
       }
 
-      sess = {
-        id:uid(),
-        courseName,
-        session,
-        instructor,
-        title:buildTitle(courseName, session),
-        date:schedule,
-        students:cleaned
-      };
-
+      sess = { id: uid(), courseName, session, instructor, title: buildTitle(courseName, session), date: schedule, students: cleaned };
       const ok = await saveSession(sess);
       toast(ok? '명단이 저장되었습니다. 이어서 태도를 입력해보세요.' : '저장에 실패했습니다');
       if(ok) renderDetail(sess.id);
@@ -853,13 +870,13 @@ console.log('attendance-app V10.3 - propagating _vercel_share to API requests');
       const filled = st.score!==null && st.score!=='' && st.score!==undefined;
       return `
       <div class="score-card ${filled?'filled':''}" data-i="${i}">
+        <div class="sc-head">
+          <div class="sc-name">${esc(st.name)}</div>
+          <div class="sc-time">${esc(st.durationMin)?esc(st.durationMin)+'분 참여':''}</div>
+        </div>
         <div class="sc-org-row">
           <input type="text" class="sc-affil" value="${esc(st.affiliation)}" placeholder="소속 (예: 동대구)">
           <input type="text" class="sc-store" value="${esc(st.storeName)}" placeholder="매장명">
-        </div>
-        <div class="sc-org-row" style="margin-top:6px;">
-          <input type="text" class="sc-name-input" value="${esc(st.name)}" placeholder="이름">
-          <input type="number" min="0" class="sc-duration" value="${esc(st.durationMin)}" placeholder="참여 시간(분)">
         </div>
         <div class="chip-row">
           ${REASON_PRESETS.map(p=>`<span class="chip ${st.score==p.score?'active':''}" data-preset="${p.score}">${p.label}</span>`).join('')}
@@ -889,8 +906,6 @@ console.log('attendance-app V10.3 - propagating _vercel_share to API requests');
       card.querySelector('.sc-reason').oninput = e=>{ s.students[i].reason = e.target.value; };
       card.querySelector('.sc-affil').oninput = e=>{ s.students[i].affiliation = e.target.value; };
       card.querySelector('.sc-store').oninput = e=>{ s.students[i].storeName = e.target.value; };
-      card.querySelector('.sc-name-input').oninput = e=>{ s.students[i].name = e.target.value; };
-      card.querySelector('.sc-duration').oninput = e=>{ s.students[i].durationMin = e.target.value; };
     });
   }
 
